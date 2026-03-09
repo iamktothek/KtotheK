@@ -11,15 +11,12 @@
         :root {
             --bg-color: #ffffff;
             --text-color: #000000;
-            --glitch-1: #00ffff; /* Cyan */
-            --glitch-2: #ff00ff; /* Magenta */
+            --glitch-cyan: #00f2ff;
+            --glitch-magenta: #ff00c1;
+            --scanline-color: rgba(0, 0, 0, 0.05);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background-color: var(--bg-color);
@@ -30,90 +27,108 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            position: relative;
         }
 
-        .container {
-            text-align: center;
+        /* --- SCANLINE EFFECT --- */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--scanline-color);
+            z-index: 10;
+            pointer-events: none;
+            animation: scanline 4s linear infinite;
         }
 
-        /* --- THE GLITCH --- */
-        .glitch-wrapper {
+        @keyframes scanline {
+            0% { top: -5%; }
+            100% { top: 105%; }
+        }
+
+        .container { text-align: center; z-index: 5; }
+
+        /* --- INDIVIDUAL LETTER GLITCH --- */
+        .glitch-text {
+            font-size: clamp(3rem, 12vw, 10rem);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+            cursor: crosshair;
+            display: flex;
+            gap: 0.05em;
+        }
+
+        .char {
             position: relative;
             display: inline-block;
         }
 
-        h1 {
-            font-weight: 900;
-            font-size: clamp(3rem, 12vw, 10rem);
-            line-height: 1;
-            text-transform: uppercase;
-            letter-spacing: -0.02em;
-            position: relative;
-        }
-
-        /* Create layers for the glitch */
-        h1::before, h1::after {
-            content: "K TO THE K";
+        /* Glitch layers for each character */
+        .char::before, .char::after {
+            content: attr(data-char);
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             background: var(--bg-color);
-            display: none; /* Hidden by default */
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+            display: none;
         }
 
-        .glitch-wrapper:hover h1::before {
+        .char:hover::before {
             display: block;
-            left: 2px;
-            text-shadow: -2px 0 var(--glitch-1);
-            clip: rect(44px, 9999px, 56px, 0);
-            animation: glitch-anim 0.2s infinite linear alternate-reverse;
+            left: 3px;
+            text-shadow: -2px 0 var(--glitch-cyan);
+            animation: glitch-anim 0.3s infinite linear alternate-reverse;
         }
 
-        .glitch-wrapper:hover h1::after {
+        .char:hover::after {
             display: block;
-            left: -2px;
-            text-shadow: -2px 0 var(--glitch-2);
-            clip: rect(10px, 9999px, 30px, 0);
-            animation: glitch-anim-2 0.3s infinite linear alternate-reverse;
+            left: -3px;
+            text-shadow: 2px 0 var(--glitch-magenta);
+            animation: glitch-anim-2 0.2s infinite linear alternate;
         }
 
         @keyframes glitch-anim {
-            0% { clip: rect(10px, 9999px, 20px, 0); }
-            20% { clip: rect(80px, 9999px, 90px, 0); }
-            40% { clip: rect(30px, 9999px, 40px, 0); }
-            60% { clip: rect(60px, 9999px, 70px, 0); }
-            80% { clip: rect(10px, 9999px, 30px, 0); }
-            100% { clip: rect(40px, 9999px, 50px, 0); }
+            0% { clip-path: inset(20% 0 50% 0); }
+            20% { clip-path: inset(80% 0 10% 0); }
+            40% { clip-path: inset(40% 0 40% 0); }
+            60% { clip-path: inset(10% 0 70% 0); }
+            80% { clip-path: inset(50% 0 20% 0); }
+            100% { clip-path: inset(30% 0 60% 0); }
         }
 
         @keyframes glitch-anim-2 {
-            0% { clip: rect(50px, 9999px, 60px, 0); }
-            100% { clip: rect(10px, 9999px, 15px, 0); }
+            0% { clip-path: inset(10% 0 80% 0); }
+            50% { clip-path: inset(60% 0 10% 0); }
+            100% { clip-path: inset(40% 0 30% 0); }
         }
 
         /* --- THE BUTTON --- */
-        .button-wrapper {
-            margin-top: 3rem;
-        }
+        .button-wrapper { margin-top: 4rem; }
 
         .n8n-link {
             text-decoration: none;
             color: var(--text-color);
             font-weight: 900;
-            font-size: 0.9rem;
-            letter-spacing: 0.3em;
-            padding: 12px 40px;
-            border: 2px solid var(--text-color);
-            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            display: inline-block;
+            font-size: 0.8rem;
+            letter-spacing: 0.5em;
+            padding: 14px 45px;
+            border: 1px solid var(--text-color);
+            transition: all 0.3s ease;
+            position: relative;
         }
 
         .n8n-link:hover {
             background: var(--text-color);
             color: var(--bg-color);
-            letter-spacing: 0.5em; /* Expanding text on hover */
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            transform: scale(1.05);
         }
 
         /* Background Grid */
@@ -124,9 +139,8 @@
             width: 100%;
             height: 100%;
             background-image: 
-                linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
+                radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
             z-index: -1;
         }
     </style>
@@ -136,13 +150,25 @@
     <div class="bg-grid"></div>
 
     <div class="container">
-        <div class="glitch-wrapper">
-            <h1>K TO THE K</h1>
-        </div>
+        <div class="glitch-text" id="glitch-container">
+            </div>
         <div class="button-wrapper">
             <a href="https://n8n.ktothek.com" class="n8n-link">N8N</a>
         </div>
     </div>
 
+    <script>
+        const text = "K TO THE K";
+        const container = document.getElementById('glitch-container');
+
+        // Break text into individual spans for letter-by-letter control
+        text.split('').forEach(char => {
+            const span = document.createElement('span');
+            span.className = 'char';
+            span.innerText = char === ' ' ? '\u00A0' : char; // Handle spaces
+            span.setAttribute('data-char', char);
+            container.appendChild(span);
+        });
+    </script>
 </body>
 </html>
