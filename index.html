@@ -23,18 +23,18 @@
 
         class Particle {
             constructor(tx, ty, isBtn) {
-                // Wide chaotic scatter
-                this.x = (Math.random() - 0.5) * (window.innerWidth * 6) + (window.innerWidth / 2);
-                this.y = (Math.random() - 0.5) * (window.innerHeight * 6) + (window.innerHeight / 2);
+                // Chaotic scattered start
+                this.x = (Math.random() - 0.5) * (window.innerWidth * 5) + (window.innerWidth / 2);
+                this.y = (Math.random() - 0.5) * (window.innerHeight * 5) + (window.innerHeight / 2);
                 
                 this.tx = tx;
                 this.ty = ty;
                 this.isBtn = isBtn;
-                this.size = isBtn ? 1.5 : 2; // Slightly thicker for bubbly look
+                this.size = isBtn ? 1.4 : 1.8; 
                 
-                // Cinematic slow speed
-                this.ease = 0.008 + (Math.random() * 0.006); 
-                this.friction = 0.92;
+                // Slow cinematic speed
+                this.ease = 0.01 + (Math.random() * 0.005); 
+                this.friction = 0.93;
                 this.vx = 0;
                 this.vy = 0;
             }
@@ -47,9 +47,9 @@
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
                     const distSq = dx * dx + dy * dy;
-                    if (distSq < 2500) { 
+                    if (distSq < 2200) { 
                         const dist = Math.sqrt(distSq);
-                        const force = (50 - dist) / 50;
+                        const force = (45 - dist) / 45;
                         targetX += (dx / dist) * force * 15; 
                         targetY += (dy / dist) * force * 15;
                     }
@@ -71,7 +71,6 @@
 
             draw() {
                 ctx.fillStyle = '#000000';
-                // Drawing rounded-style rects (particles)
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
                 ctx.fill();
@@ -88,33 +87,40 @@
             tCtx.fillStyle = 'white';
             tCtx.fillRect(0, 0, 2000, 1000);
             
+            // Text Rendering: Explicitly NO TAILS (Sans-Serif)
             tCtx.fillStyle = 'black';
-            // Using Rounded Fonts for a "Bubbly/Futuristic" look
-            tCtx.font = 'bold 240px "Varela Round", "Arial Rounded MT Bold", Helvetica, sans-serif'; 
+            tCtx.font = '900 220px system-ui, -apple-system, sans-serif'; 
             tCtx.textAlign = 'center';
             tCtx.textBaseline = 'middle';
-            
-            // Draw text: K to the K
-            tCtx.fillText("K to the K", 1000, 400);
+            tCtx.fillText("K to the K", 1000, 380);
 
-            // Futuristic Pill-shaped Button
-            const btnW = 480;
+            // Centered Pill Button
+            const btnW = 440;
             const btnH = 150;
             const btnX = 1000 - (btnW / 2);
-            const btnY = 600;
+            const btnY = 580;
             
-            // Draw a rounded button box
             tCtx.beginPath();
-            tCtx.roundRect(btnX, btnY, btnW, btnH, 75); // Native pill shape
+            // Using a simple arc-based pill to ensure compatibility
+            tCtx.moveTo(btnX + btnH/2, btnY);
+            tCtx.lineTo(btnX + btnW - btnH/2, btnY);
+            tCtx.arcTo(btnX + btnW, btnY, btnX + btnW, btnY + btnH, btnH/2);
+            tCtx.lineTo(btnX + btnW, btnY + btnH - btnH/2);
+            tCtx.arcTo(btnX + btnW, btnY + btnH, btnX + btnW - btnH/2, btnY + btnH, btnH/2);
+            tCtx.lineTo(btnX + btnH/2, btnY + btnH);
+            tCtx.arcTo(btnX, btnY + btnH, btnX, btnY + btnH - btnH/2, btnH/2);
+            tCtx.lineTo(btnX, btnY + btnH/2);
+            tCtx.arcTo(btnX, btnY, btnX + btnH/2, btnY, btnH/2);
             tCtx.fill();
 
             tCtx.fillStyle = 'white';
-            tCtx.font = 'bold 80px Helvetica, sans-serif'; 
-            tCtx.fillText("N8N", 1000, 680);
+            tCtx.font = 'bold 85px system-ui, sans-serif'; 
+            // Correcting baseline for perfect N8N centering
+            tCtx.fillText("N8N", 1000, btnY + (btnH / 2) + 5);
 
             const data = tCtx.getImageData(0, 0, 2000, 1000).data;
             
-            // Reduced density (step 6)
+            // Reduced density (Step 6)
             const step = 6; 
             const points = [];
 
@@ -125,7 +131,7 @@
                         points.push({
                             x: x,
                             y: y,
-                            isBtn: y > 520
+                            isBtn: y > 500
                         });
                     }
                 }
@@ -163,12 +169,17 @@
             mouse.y = e.clientY;
 
             const scale = (width * 0.7) / 2000;
-            const btnLeft = (760 * scale) + (width - (2000 * scale)) / 2;
-            const btnRight = (1240 * scale) + (width - (2000 * scale)) / 2;
-            const btnTop = (600 * scale) + (height - (1000 * scale)) / 2;
-            const btnBottom = (750 * scale) + (height - (1000 * scale)) / 2;
+            const btnCenterY = (655 * scale) + (height - (1000 * scale)) / 2;
+            const btnCenterX = width / 2;
+            const btnW = 440 * scale;
+            const btnH = 150 * scale;
 
-            isOverButton = (mouse.x > btnLeft && mouse.x < btnRight && mouse.y > btnTop && mouse.y < btnBottom);
+            isOverButton = (
+                mouse.x > btnCenterX - btnW/2 && 
+                mouse.x < btnCenterX + btnW/2 && 
+                mouse.y > btnCenterY - btnH/2 && 
+                mouse.y < btnCenterY + btnH/2
+            );
             canvas.style.cursor = isOverButton ? 'pointer' : 'default';
         });
 
