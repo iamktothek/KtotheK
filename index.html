@@ -23,19 +23,18 @@
 
         class Particle {
             constructor(tx, ty, isBtn) {
-                // MASSIVELY SCATTERED START
-                // Particles start anywhere from -100% to 200% of screen width/height
-                this.x = (Math.random() - 0.5) * (window.innerWidth * 3) + (window.innerWidth / 2);
-                this.y = (Math.random() - 0.5) * (window.innerHeight * 3) + (window.innerHeight / 2);
+                // Chaotic scattered start
+                this.x = (Math.random() - 0.5) * (window.innerWidth * 4) + (window.innerWidth / 2);
+                this.y = (Math.random() - 0.5) * (window.innerHeight * 4) + (window.innerHeight / 2);
                 
                 this.tx = tx;
                 this.ty = ty;
                 this.isBtn = isBtn;
-                this.size = isBtn ? 1.2 : 1.5; 
+                this.size = isBtn ? 1.4 : 1.8; 
                 
-                // Lower values = Slower, more fluid motion
-                this.ease = 0.015 + (Math.random() * 0.01); 
-                this.friction = 0.95;
+                // Cinematic slow speed
+                this.ease = 0.012 + (Math.random() * 0.008); 
+                this.friction = 0.94;
                 this.vx = 0;
                 this.vy = 0;
             }
@@ -44,12 +43,11 @@
                 let targetX = this.tx;
                 let targetY = this.ty;
 
-                // 1. Subtle Repulsion (Text only)
                 if (!this.isBtn) {
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
                     const distSq = dx * dx + dy * dy;
-                    if (distSq < 2000) { 
+                    if (distSq < 2200) { 
                         const dist = Math.sqrt(distSq);
                         const force = (45 - dist) / 45;
                         targetX += (dx / dist) * force * 20; 
@@ -57,17 +55,13 @@
                     }
                 }
 
-                // 2. Glitch effect (Button only)
                 if (this.isBtn && isOverButton) {
                     targetX += (Math.random() - 0.5) * 5;
                     targetY += (Math.random() - 0.5) * 5;
                 }
 
-                // 3. Slower Physics Engine
-                // Velocity based movement for a smoother "drift"
                 this.vx += (targetX - this.x) * this.ease;
                 this.vy += (targetY - this.y) * this.ease;
-                
                 this.vx *= this.friction;
                 this.vy *= this.friction;
 
@@ -91,20 +85,22 @@
             tCtx.fillStyle = 'white';
             tCtx.fillRect(0, 0, 2000, 1000);
             
+            // Text Rendering with Mixed Case and Serif Font
             tCtx.fillStyle = 'black';
-            tCtx.font = '900 220px sans-serif'; 
+            tCtx.font = '700 230px Georgia, serif'; 
             tCtx.textAlign = 'center';
-            tCtx.fillText("K TO THE K", 1000, 400);
+            tCtx.fillText("K to the K", 1000, 400);
 
-            // Draw Button
+            // Button Box
             tCtx.fillRect(750, 580, 500, 160);
             tCtx.fillStyle = 'white';
-            tCtx.font = 'bold 100px sans-serif';
+            tCtx.font = 'bold 100px Arial, sans-serif'; // Button keeps clean sans-serif
             tCtx.fillText("N8N", 1000, 700);
 
             const data = tCtx.getImageData(0, 0, 2000, 1000).data;
             
-            const step = 3; 
+            // Slightly reduced density (step 4 instead of 3)
+            const step = 4; 
             const points = [];
 
             for (let y = 0; y < 1000; y += step) {
