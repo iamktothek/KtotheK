@@ -5,34 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K to the K</title>
     <style>
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            overflow: hidden; 
-            background-color: #ffffff; 
-            cursor: default;
-        }
-        canvas { display: block; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: white; }
+        canvas { display: block; width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
 
     <script>
         let scene, camera, renderer, points;
-        let mouse = new THREE.Vector2(-1, -1);
-        let targetRotation = new THREE.Vector2(0, 0);
+        const mouse = { x: -1000, y: -1000 }; 
+        const targetRot = { x: 0, y: 0 };
         let isOverButton = false;
-        
-        const particleCount = 6000; 
-        const positions = new Float32Array(particleCount * 3);
-        const targets = new Float32Array(particleCount * 3);
-        const isButton = new Uint8Array(particleCount); 
+        let assembled = false;
+        let assembleProgress = 0;
 
-        init();
-        animate();
+        const count = 4000; // Lower count for maximum performance/compatibility
+        const pos = new Float32Array(count * 3);
+        const targetPos = new Float32Array(count * 3);
+        const isBtn = new Uint8Array(count);
+
+        try {
+            init();
+            animate();
+        } catch (e) {
+            console.error("Three.js failed to load:", e);
+            document.body.innerHTML = "<h1 style='margin:20px'>Site Loading Error. Please refresh.</h1>";
+        }
 
         function init() {
             scene = new THREE.Scene();
@@ -45,54 +45,74 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            // Random initial scatter
-            for (let i = 0; i < particleCount; i++) {
-                positions[i*3] = (Math.random() - 0.5) * 40;
-                positions[i*3+1] = (Math.random() - 0.5) * 40;
-                positions[i*3+2] = (Math.random() - 0.5) * 10;
+            // 1. Initial random scatter
+            for (let i = 0; i < count; i++) {
+                pos[i*3] = (Math.random() - 0.5) * 50;
+                pos[i*3+1] = (Math.random() - 0.5) * 50;
+                pos[i*3+2] = (Math.random() - 0.5) * 10;
             }
 
-            const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
 
-            const material = new THREE.PointsMaterial({
-                size: 0.1,
+            const mat = new THREE.PointsMaterial({
+                size: 0.12,
                 color: 0x000000,
                 transparent: true,
                 opacity: 0.8
             });
 
-            points = new THREE.Points(geometry, material);
+            points = new THREE.Points(geo, mat);
             scene.add(points);
 
-            createCoordinates();
+            // 2. Generate Map
+            const cvs = document.createElement('canvas');
+            const ctx = cvs.getContext('2d');
+            cvs.width = 1000; cvs.height = 500;
+            ctx.fillStyle = 'white'; ctx.fillRect(0,0,1000,500);
+            
+            ctx.fillStyle = 'black';
+            ctx.font = 'bold 110px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText("K TO THE K", 500, 200);
 
-            // Assemble
-            gsap.to(positions, {
-                endArray: targets,
-                duration: 3,
-                ease: "power3.out",
-                onUpdate: () => { points.geometry.attributes.position.needsUpdate = true; }
-            });
+            // Button Box
+            ctx.fillRect(360, 310, 280, 100);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 50px Arial, sans-serif';
+            ctx.fillText("N8N", 500, 375);
 
-            window.addEventListener('mousemove', (e) => {
+            const data = ctx.getImageData(0,0,1000,500).data;
+            const validPts = [];
+            for(let y=0; y<500; y+=4) {
+                for(let x=0; x<1000; x+=4) {
+                    if(data[(y*1000+x)*4] < 200) {
+                        validPts.push({x: (x-500)*0.02, y: (250-y)*0.02, b: y > 280});
+                    }
+                }
+            }
+
+            for(let i=0; i<count; i++) {
+                const p = validPts[i % validPts.length];
+                targetPos[i*3] = p.x;
+                targetPos[i*3+1] = p.y;
+                targetPos[i*3+2] = 0;
+                isBtn[i] = p.b ? 1 : 0;
+            }
+
+            // Mouse Events
+            window.addEventListener('mousemove', e => {
                 mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
                 mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-                targetRotation.x = -mouse.y * 0.3;
-                targetRotation.y = mouse.x * 0.3;
-
-                // Simple Box Check for N8N (lower center)
-                const over = (mouse.y < -0.15 && mouse.y > -0.6 && Math.abs(mouse.x) < 0.25);
-                if (over !== isOverButton) {
-                    isOverButton = over;
-                    document.body.style.cursor = isOverButton ? 'pointer' : 'default';
-                }
+                targetRot.y = mouse.x * 0.2;
+                targetRot.x = -mouse.y * 0.2;
+                
+                // Button Detect
+                isOverButton = (mouse.y < -0.1 && mouse.y > -0.6 && Math.abs(mouse.x) < 0.2);
+                document.body.style.cursor = isOverButton ? 'pointer' : 'default';
             });
 
-            window.addEventListener('click', () => {
-                if (isOverButton) window.location.href = "https://n8n.ktothek.com";
-            });
-
+            window.addEventListener('click', () => { if(isOverButton) window.location.href="https://n8n.ktothek.com"; });
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -100,92 +120,47 @@
             });
         }
 
-        function createCoordinates() {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 1000;
-            canvas.height = 500;
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Title
-            ctx.fillStyle = 'black';
-            ctx.font = 'bold 100px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText("K TO THE K", 500, 200);
-
-            // Button Box
-            ctx.fillRect(350, 320, 300, 100);
-
-            // Button Text
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 50px sans-serif';
-            ctx.fillText("N8N", 500, 385);
-
-            const data = ctx.getImageData(0, 0, 1000, 500).data;
-            const pts = [];
-
-            for (let y = 0; y < 500; y += 4) {
-                for (let x = 0; x < 1000; x += 4) {
-                    const i = (y * 1000 + x) * 4;
-                    if (data[i] < 200) {
-                        pts.push({
-                            x: (x - 500) * 0.015,
-                            y: (250 - y) * 0.015,
-                            btn: (y > 280)
-                        });
-                    }
-                }
-            }
-
-            for (let i = 0; i < particleCount; i++) {
-                const p = pts[i % pts.length];
-                targets[i*3] = p.x;
-                targets[i*3+1] = p.y;
-                targets[i*3+2] = 0;
-                isButton[i] = p.btn ? 1 : 0;
-            }
-        }
-
         function animate() {
             requestAnimationFrame(animate);
 
-            // Apply slight tilt
-            points.rotation.x += (targetRotation.x - points.rotation.x) * 0.05;
-            points.rotation.y += (targetRotation.y - points.rotation.y) * 0.05;
+            // Assembly transition
+            if (assembleProgress < 1) assembleProgress += 0.005;
 
-            const pos = points.geometry.attributes.position.array;
+            points.rotation.x += (targetRot.x - points.rotation.x) * 0.05;
+            points.rotation.y += (targetRot.y - points.rotation.y) * 0.05;
+
+            const pArray = points.geometry.attributes.position.array;
             
-            // Interaction Point (Adjusted for camera Z and rotation)
-            const mx = mouse.x * 8; 
-            const my = mouse.y * 5;
+            // Interaction logic
+            const mx = mouse.x * 10;
+            const my = mouse.y * 6;
 
-            for (let i = 0; i < particleCount; i++) {
-                let tx = targets[i*3];
-                let ty = targets[i*3+1];
-                let tz = targets[i*3+2];
+            for(let i=0; i<count; i++) {
+                let tx = targetPos[i*3];
+                let ty = targetPos[i*3+1];
+                let tz = targetPos[i*3+2];
 
-                if (isButton[i] === 0) {
-                    // Repulsion Logic for Title
-                    const dx = pos[i*3] - mx;
-                    const dy = pos[i*3+1] - my;
-                    const distSq = dx*dx + dy*dy;
-                    if (distSq < 2.0) {
-                        const dist = Math.sqrt(distSq);
-                        const force = (2.0 - dist) / 2.0;
-                        tx += (dx/dist) * force * 3;
-                        ty += (dy/dist) * force * 3;
+                if(isBtn[i] === 0) {
+                    // Repulsion for K TO THE K
+                    const dx = pArray[i*3] - mx;
+                    const dy = pArray[i*3+1] - my;
+                    const dSq = dx*dx + dy*dy;
+                    if(dSq < 2.5) {
+                        const d = Math.sqrt(dSq);
+                        const f = (2.5 - d) / 2.5;
+                        tx += (dx/d) * f * 4;
+                        ty += (dy/d) * f * 4;
                     }
                 } else if (isOverButton) {
-                    // Glitch Logic for Button
-                    tx += (Math.random() - 0.5) * 0.3;
-                    ty += (Math.random() - 0.5) * 0.3;
+                    // Glitch for Button
+                    tx += (Math.random() - 0.5) * 0.2;
+                    ty += (Math.random() - 0.5) * 0.2;
                 }
 
-                // Spring movement
-                pos[i*3] += (tx - pos[i*3]) * 0.1;
-                pos[i*3+1] += (ty - pos[i*3+1]) * 0.1;
-                pos[i*3+2] += (tz - pos[i*3+2]) * 0.1;
+                // Smooth movement
+                pArray[i*3] += (tx - pArray[i*3]) * 0.08;
+                pArray[i*3+1] += (ty - pArray[i*3+1]) * 0.08;
+                pArray[i*3+2] += (tz - pArray[i*3+2]) * 0.08;
             }
 
             points.geometry.attributes.position.needsUpdate = true;
