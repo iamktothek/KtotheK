@@ -23,18 +23,18 @@
 
         class Particle {
             constructor(tx, ty, isBtn) {
-                // Massive scatter at start
-                this.x = (Math.random() - 0.5) * (window.innerWidth * 5) + (window.innerWidth / 2);
-                this.y = (Math.random() - 0.5) * (window.innerHeight * 5) + (window.innerHeight / 2);
+                // Wide chaotic scatter
+                this.x = (Math.random() - 0.5) * (window.innerWidth * 6) + (window.innerWidth / 2);
+                this.y = (Math.random() - 0.5) * (window.innerHeight * 6) + (window.innerHeight / 2);
                 
                 this.tx = tx;
                 this.ty = ty;
                 this.isBtn = isBtn;
-                this.size = isBtn ? 1.4 : 1.7; 
+                this.size = isBtn ? 1.5 : 2; // Slightly thicker for bubbly look
                 
-                // Slow cinematic speed
-                this.ease = 0.01 + (Math.random() * 0.005); 
-                this.friction = 0.93;
+                // Cinematic slow speed
+                this.ease = 0.008 + (Math.random() * 0.006); 
+                this.friction = 0.92;
                 this.vx = 0;
                 this.vy = 0;
             }
@@ -47,17 +47,17 @@
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
                     const distSq = dx * dx + dy * dy;
-                    if (distSq < 2200) { 
+                    if (distSq < 2500) { 
                         const dist = Math.sqrt(distSq);
-                        const force = (45 - dist) / 45;
+                        const force = (50 - dist) / 50;
                         targetX += (dx / dist) * force * 15; 
                         targetY += (dy / dist) * force * 15;
                     }
                 }
 
                 if (this.isBtn && isOverButton) {
-                    targetX += (Math.random() - 0.5) * 5;
-                    targetY += (Math.random() - 0.5) * 5;
+                    targetX += (Math.random() - 0.5) * 6;
+                    targetY += (Math.random() - 0.5) * 6;
                 }
 
                 this.vx += (targetX - this.x) * this.ease;
@@ -71,7 +71,10 @@
 
             draw() {
                 ctx.fillStyle = '#000000';
-                ctx.fillRect(this.x, this.y, this.size, this.size);
+                // Drawing rounded-style rects (particles)
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
 
@@ -85,24 +88,34 @@
             tCtx.fillStyle = 'white';
             tCtx.fillRect(0, 0, 2000, 1000);
             
-            // Explicitly rendering Mixed Case with Serif
             tCtx.fillStyle = 'black';
-            // Using "Times New Roman" as a fallback to ensure lowercase "to the" is obvious
-            tCtx.font = 'normal 220px "Times New Roman", Georgia, serif'; 
+            // Using Rounded Fonts for a "Bubbly/Futuristic" look
+            tCtx.font = 'bold 240px "Varela Round", "Arial Rounded MT Bold", Helvetica, sans-serif'; 
             tCtx.textAlign = 'center';
             tCtx.textBaseline = 'middle';
+            
+            // Draw text: K to the K
             tCtx.fillText("K to the K", 1000, 400);
 
-            // Button Box
-            tCtx.fillRect(750, 580, 500, 160);
+            // Futuristic Pill-shaped Button
+            const btnW = 480;
+            const btnH = 150;
+            const btnX = 1000 - (btnW / 2);
+            const btnY = 600;
+            
+            // Draw a rounded button box
+            tCtx.beginPath();
+            tCtx.roundRect(btnX, btnY, btnW, btnH, 75); // Native pill shape
+            tCtx.fill();
+
             tCtx.fillStyle = 'white';
-            tCtx.font = 'bold 100px Arial, sans-serif'; 
-            tCtx.fillText("N8N", 1000, 690);
+            tCtx.font = 'bold 80px Helvetica, sans-serif'; 
+            tCtx.fillText("N8N", 1000, 680);
 
             const data = tCtx.getImageData(0, 0, 2000, 1000).data;
             
-            // Reduced density (step 5)
-            const step = 5; 
+            // Reduced density (step 6)
+            const step = 6; 
             const points = [];
 
             for (let y = 0; y < 1000; y += step) {
@@ -118,7 +131,7 @@
                 }
             }
 
-            const scale = (width * 0.75) / 2000; 
+            const scale = (width * 0.7) / 2000; 
             const offsetX = (width - (2000 * scale)) / 2;
             const offsetY = (height - (1000 * scale)) / 2;
 
@@ -149,11 +162,11 @@
             mouse.x = e.clientX;
             mouse.y = e.clientY;
 
-            const scale = (width * 0.75) / 2000;
-            const btnLeft = (750 * scale) + (width - (2000 * scale)) / 2;
-            const btnRight = (1250 * scale) + (width - (2000 * scale)) / 2;
-            const btnTop = (580 * scale) + (height - (1000 * scale)) / 2;
-            const btnBottom = (740 * scale) + (height - (1000 * scale)) / 2;
+            const scale = (width * 0.7) / 2000;
+            const btnLeft = (760 * scale) + (width - (2000 * scale)) / 2;
+            const btnRight = (1240 * scale) + (width - (2000 * scale)) / 2;
+            const btnTop = (600 * scale) + (height - (1000 * scale)) / 2;
+            const btnBottom = (750 * scale) + (height - (1000 * scale)) / 2;
 
             isOverButton = (mouse.x > btnLeft && mouse.x < btnRight && mouse.y > btnTop && mouse.y < btnBottom);
             canvas.style.cursor = isOverButton ? 'pointer' : 'default';
