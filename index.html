@@ -15,26 +15,23 @@
 margin:0;
 padding:0;
 box-sizing:border-box;
--webkit-user-select:none;
 user-select:none;
+-webkit-user-select:none;
 }
 
 body{
 height:100vh;
-width:100%;
 background:#050510;
-color:white;
 font-family:'Orbitron',sans-serif;
 overflow:hidden;
 display:flex;
 align-items:center;
 justify-content:center;
+color:white;
 }
 
-#tsparticles{
+canvas{
 position:fixed;
-width:100%;
-height:100%;
 top:0;
 left:0;
 z-index:0;
@@ -44,14 +41,12 @@ z-index:0;
 position:relative;
 z-index:2;
 text-align:center;
-animation:fadeIn 1.5s ease forwards;
 }
 
 .title{
 
 font-size:clamp(3rem,8vw,6rem);
 letter-spacing:.25em;
-text-transform:uppercase;
 
 background:linear-gradient(90deg,#00f2ff,#ff00ea,#00f2ff);
 background-size:200%;
@@ -66,34 +61,25 @@ gradientMove 6s linear infinite;
 }
 
 .divider{
-
 width:160px;
 height:2px;
 margin:30px auto;
-
 background:linear-gradient(90deg,transparent,#00eaff,transparent);
-
 box-shadow:0 0 10px #00eaff;
-
 }
 
 .button{
 
 display:inline-block;
-margin-top:10px;
 padding:16px 42px;
-
 font-size:1.2rem;
 letter-spacing:.25em;
 
-text-decoration:none;
-
 color:#00eaff;
+text-decoration:none;
 
 border:2px solid #00eaff;
 border-radius:8px;
-
-transition:.3s;
 
 animation:glowPulse 3s ease-in-out infinite;
 
@@ -101,19 +87,13 @@ animation:glowPulse 3s ease-in-out infinite;
 
 .button:hover{
 
-color:#fff;
-
 box-shadow:
 0 0 10px #00eaff,
-0 0 20px #ff00f7,
-0 0 40px #ff00f7;
+0 0 30px #ff00f7,
+0 0 60px #ff00f7;
 
-transform:translateY(-3px);
+color:white;
 
-}
-
-.button:active{
-transform:scale(.96);
 }
 
 @keyframes glowPulse{
@@ -122,12 +102,11 @@ transform:scale(.96);
 
 text-shadow:
 0 0 10px #00eaff,
-0 0 20px #ff00f7,
-0 0 40px #ff00f7;
+0 0 20px #ff00f7;
 
 box-shadow:
-0 0 5px #00eaff,
-0 0 15px #ff00f7;
+0 0 10px #00eaff,
+0 0 20px #ff00f7;
 
 }
 
@@ -135,8 +114,7 @@ box-shadow:
 
 text-shadow:
 0 0 20px #00eaff,
-0 0 40px #ff00f7,
-0 0 80px #ff00f7;
+0 0 40px #ff00f7;
 
 box-shadow:
 0 0 20px #00eaff,
@@ -147,25 +125,8 @@ box-shadow:
 }
 
 @keyframes gradientMove{
-
 0%{background-position:0%}
-
 100%{background-position:200%}
-
-}
-
-@keyframes fadeIn{
-
-0%{
-opacity:0;
-transform:translateY(20px)
-}
-
-100%{
-opacity:1;
-transform:translateY(0)
-}
-
 }
 
 </style>
@@ -173,8 +134,6 @@ transform:translateY(0)
 </head>
 
 <body>
-
-<div id="tsparticles"></div>
 
 <div class="container">
 
@@ -186,98 +145,94 @@ transform:translateY(0)
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/tsparticles@3/tsparticles.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 
 <script>
 
-tsParticles.load({
+let scene = new THREE.Scene()
 
-id:"tsparticles",
+let camera = new THREE.PerspectiveCamera(
+75,
+window.innerWidth/window.innerHeight,
+0.1,
+1000
+)
 
-options:{
+camera.position.z = 5
 
-background:{
-color:"#050510"
-},
+let renderer = new THREE.WebGLRenderer({alpha:true})
+renderer.setSize(window.innerWidth,window.innerHeight)
 
-fpsLimit:60,
+document.body.appendChild(renderer.domElement)
 
-particles:{
+let particles = 1500
 
-number:{
-value:80,
-density:{
-enable:true,
-area:800
-}
-},
+let geometry = new THREE.BufferGeometry()
 
-color:{
-value:["#00eaff","#ff00f7","#ffffff"]
-},
+let positions = new Float32Array(particles*3)
 
-shape:{type:"circle"},
+for(let i=0;i<particles*3;i++){
 
-opacity:{value:0.7},
-
-size:{
-value:{min:1,max:3}
-},
-
-links:{
-enable:true,
-distance:140,
-color:"#00eaff",
-opacity:0.25,
-width:1
-},
-
-move:{
-enable:true,
-speed:1,
-outModes:{
-default:"bounce"
-}
-}
-
-},
-
-interactivity:{
-
-events:{
-
-onClick:{
-enable:true,
-mode:"push"
-},
-
-onHover:{
-enable:true,
-mode:"repulse"
-},
-
-resize:true
-
-},
-
-modes:{
-
-push:{quantity:6},
-
-repulse:{
-distance:120,
-duration:0.4
-}
+positions[i]=(Math.random()-0.5)*20
 
 }
 
-},
+geometry.setAttribute(
+'position',
+new THREE.BufferAttribute(positions,3)
+)
 
-detectRetina:true
+let material = new THREE.PointsMaterial({
+
+color:0x00eaff,
+size:0.05
+
+})
+
+let particleSystem = new THREE.Points(geometry,material)
+
+scene.add(particleSystem)
+
+let mouse={x:0,y:0}
+
+window.addEventListener('mousemove',(e)=>{
+
+mouse.x=(e.clientX/window.innerWidth-0.5)*2
+mouse.y=(e.clientY/window.innerHeight-0.5)*2
+
+})
+
+window.addEventListener('touchmove',(e)=>{
+
+mouse.x=(e.touches[0].clientX/window.innerWidth-0.5)*2
+mouse.y=(e.touches[0].clientY/window.innerHeight-0.5)*2
+
+})
+
+function animate(){
+
+requestAnimationFrame(animate)
+
+particleSystem.rotation.x +=0.0005
+particleSystem.rotation.y +=0.001
+
+particleSystem.rotation.x += mouse.y*0.002
+particleSystem.rotation.y += mouse.x*0.002
+
+renderer.render(scene,camera)
 
 }
 
-});
+animate()
+
+window.addEventListener('resize',()=>{
+
+camera.aspect=window.innerWidth/window.innerHeight
+camera.updateProjectionMatrix()
+
+renderer.setSize(window.innerWidth,window.innerHeight)
+
+})
 
 </script>
 
