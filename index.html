@@ -15,7 +15,7 @@
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        let width, height;
+        let width, height, time = 0;
         
         let particles = [];
         const mouse = { x: -1000, y: -1000 };
@@ -23,50 +23,55 @@
 
         class Particle {
             constructor(tx, ty, isBtn) {
-                // Chaotic scattered start
-                this.x = (Math.random() - 0.5) * (window.innerWidth * 5) + (window.innerWidth / 2);
-                this.y = (Math.random() - 0.5) * (window.innerHeight * 5) + (window.innerHeight / 2);
+                // Massive scatter at start - completely covering the viewport
+                this.x = Math.random() * window.innerWidth;
+                this.y = Math.random() * window.innerHeight;
+                if(Math.random() > 0.5) this.x = Math.random() > 0.5 ? -100 : window.innerWidth + 100;
                 
                 this.tx = tx;
                 this.ty = ty;
                 this.isBtn = isBtn;
-                this.size = isBtn ? 1.4 : 1.8; 
                 
-                // Slow cinematic speed
-                this.ease = 0.01 + (Math.random() * 0.005); 
-                this.friction = 0.93;
-                this.vx = 0;
-                this.vy = 0;
+                // Randomized size for non-uniform texture
+                this.size = isBtn ? 1.5 : (Math.random() * 1.6 + 0.6); 
+                
+                // Assembly speed: Constant and slow (no bounce)
+                this.speed = 0.02 + Math.random() * 0.02;
+                // Unique offset for the "breathing" effect
+                this.angle = Math.random() * Math.PI * 2;
             }
 
             update() {
-                let targetX = this.tx;
-                let targetY = this.ty;
+                // Subtle "Breathing" drift logic
+                this.angle += 0.02;
+                let driftX = Math.cos(this.angle) * 0.8;
+                let driftY = Math.sin(this.angle) * 0.8;
 
+                let targetX = this.tx + driftX;
+                let targetY = this.ty + driftY;
+
+                // 1. Subtle Repulsion (Text only)
                 if (!this.isBtn) {
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
                     const distSq = dx * dx + dy * dy;
-                    if (distSq < 2200) { 
+                    if (distSq < 2500) { 
                         const dist = Math.sqrt(distSq);
-                        const force = (45 - dist) / 45;
+                        const force = (50 - dist) / 50;
                         targetX += (dx / dist) * force * 15; 
                         targetY += (dy / dist) * force * 15;
                     }
                 }
 
+                // 2. Glitch effect (Button only)
                 if (this.isBtn && isOverButton) {
                     targetX += (Math.random() - 0.5) * 6;
                     targetY += (Math.random() - 0.5) * 6;
                 }
 
-                this.vx += (targetX - this.x) * this.ease;
-                this.vy += (targetY - this.y) * this.ease;
-                this.vx *= this.friction;
-                this.vy *= this.friction;
-
-                this.x += this.vx;
-                this.y += this.vy;
+                // 3. Linear Smooth Damping (Replaces Pulsating Physics)
+                this.x += (targetX - this.x) * this.speed;
+                this.y += (targetY - this.y) * this.speed;
             }
 
             draw() {
@@ -87,9 +92,8 @@
             tCtx.fillStyle = 'white';
             tCtx.fillRect(0, 0, 2000, 1000);
             
-            // Text Rendering: Explicitly NO TAILS (Sans-Serif)
             tCtx.fillStyle = 'black';
-            tCtx.font = '900 220px system-ui, -apple-system, sans-serif'; 
+            tCtx.font = '900 230px system-ui, -apple-system, sans-serif'; 
             tCtx.textAlign = 'center';
             tCtx.textBaseline = 'middle';
             tCtx.fillText("K to the K", 1000, 380);
@@ -101,27 +105,16 @@
             const btnY = 580;
             
             tCtx.beginPath();
-            // Using a simple arc-based pill to ensure compatibility
-            tCtx.moveTo(btnX + btnH/2, btnY);
-            tCtx.lineTo(btnX + btnW - btnH/2, btnY);
-            tCtx.arcTo(btnX + btnW, btnY, btnX + btnW, btnY + btnH, btnH/2);
-            tCtx.lineTo(btnX + btnW, btnY + btnH - btnH/2);
-            tCtx.arcTo(btnX + btnW, btnY + btnH, btnX + btnW - btnH/2, btnY + btnH, btnH/2);
-            tCtx.lineTo(btnX + btnH/2, btnY + btnH);
-            tCtx.arcTo(btnX, btnY + btnH, btnX, btnY + btnH - btnH/2, btnH/2);
-            tCtx.lineTo(btnX, btnY + btnH/2);
-            tCtx.arcTo(btnX, btnY, btnX + btnH/2, btnY, btnH/2);
+            tCtx.roundRect(btnX, btnY, btnW, btnH, 75);
             tCtx.fill();
 
             tCtx.fillStyle = 'white';
             tCtx.font = 'bold 85px system-ui, sans-serif'; 
-            // Correcting baseline for perfect N8N centering
             tCtx.fillText("N8N", 1000, btnY + (btnH / 2) + 5);
 
             const data = tCtx.getImageData(0, 0, 2000, 1000).data;
             
-            // Reduced density (Step 6)
-            const step = 6; 
+            const step = 3; 
             const points = [];
 
             for (let y = 0; y < 1000; y += step) {
@@ -129,8 +122,8 @@
                     const i = (y * 2000 + x) * 4;
                     if (data[i] < 200) {
                         points.push({
-                            x: x,
-                            y: y,
+                            x: x + (Math.random() - 0.5) * 2,
+                            y: y + (Math.random() - 0.5) * 2,
                             isBtn: y > 500
                         });
                     }
