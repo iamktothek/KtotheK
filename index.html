@@ -5,7 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K to the K</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #ffffff; touch-action: none; }
+        /* Explicitly forcing the default cursor */
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background-color: #ffffff; 
+            cursor: default !important; 
+            touch-action: none;
+        }
         canvas { display: block; }
     </style>
 </head>
@@ -18,16 +26,14 @@
         let scene, camera, renderer, points;
         let mouse = new THREE.Vector2();
         let targetRotation = new THREE.Vector2();
-        let raycaster = new THREE.Raycaster();
         
         const particleCount = 20000;
         const positions = new Float32Array(particleCount * 3);
         const targets = new Float32Array(particleCount * 3);
-        const velocities = new Float32Array(particleCount * 3);
-        const originalTargets = new Float32Array(particleCount * 3); // Store baseline targets
-
+        const colors = new Float32Array(particleCount * 3);
+        
         let isOverButton = false;
-        let buttonParticleIndices = []; // Keep track of N8N particles for glitching
+        let buttonIndices = []; // Particles used for the N8N button
 
         init();
         animate();
@@ -44,154 +50,104 @@
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // 1. Chaotic Scatter
+            // 1. Initial Chaotic Scatter
             for (let i = 0; i < particleCount; i++) {
-                positions[i * 3] = (Math.random() - 0.5) * 50;
-                positions[i * 3 + 1] = (Math.random() - 0.5) * 50;
+                positions[i * 3] = (Math.random() - 0.5) * 60;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 60;
                 positions[i * 3 + 2] = (Math.random() - 0.5) * 20;
             }
 
             const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-            // Setup custom shader material for individual particle colors
-            const vertexShader = `
-                attribute vec3 color;
-                varying vec3 vColor;
-                void main() {
-                    vColor = color;
-                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                    gl_PointSize = 4.0; // Fixed size
-                    gl_Position = projectionMatrix * mvPosition;
-                }
-            `;
-
-            const fragmentShader = `
-                varying vec3 vColor;
-                void main() {
-                    gl_FragColor = vec4(vColor, 1.0);
-                }
-            `;
-
-            const material = new THREE.ShaderMaterial({
-                uniforms: {},
-                vertexShader,
-                fragmentShader,
-                transparent: true
-            });
-
-            // Initialize all colors to black
-            const colors = new Float32Array(particleCount * 3);
-            for(let i=0; i < particleCount * 3; i+=3) {
-                colors[i] = 0; // R
-                colors[i+1] = 0; // G
-                colors[i+2] = 0; // B
-            }
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.04,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9
+            });
 
             points = new THREE.Points(geometry, material);
             scene.add(points);
 
-            // 2. Generate the "K to the K" and "N8N" map
-            generateCombinedMap();
+            generateMaps();
 
-            // 3. Assemble Animation
+            // Assemble Animation
             gsap.to(positions, {
                 endArray: targets,
                 duration: 4,
                 ease: "expo.out",
-                onUpdate: () => { points.geometry.attributes.position.needsUpdate = true; },
-                onComplete: () => {
-                    // Store the baseline formed positions so we can glitch *from* them
-                    originalTargets.set(targets);
-                }
+                onUpdate: () => { points.geometry.attributes.position.needsUpdate = true; }
             });
 
-            // Input Listeners
             window.addEventListener('mousemove', onMouseMove);
             window.addEventListener('click', onClick);
             window.addEventListener('resize', onWindowResize);
         }
 
-        function generateCombinedMap() {
+        function generateMaps() {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = 2000;
             canvas.height = 1000;
 
-            // Fill background (not necessary with white scene, but keeps math sane)
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            // Draw MAIN TITLE (Top half, Black text)
-            ctx.fillStyle = 'black';
-            ctx.font = '900 220px sans-serif';
-            ctx.fillText("K TO THE K", canvas.width / 2, canvas.height * 0.35);
-
-            // Set up button boundary (white-on-black for sampling)
-            ctx.fillStyle = 'white'; // White is the sampling key
-            const bX = canvas.width / 2 - 250, bY = canvas.height * 0.7 - 80, bW = 500, bH = 160;
-            ctx.fillRect(bX, bY, bW, bH); // White Button background
-
-            // Draw Button Text (Black-on-white)
-            ctx.fillStyle = 'black'; // Black text on white button
-            ctx.font = '700 100px sans-serif';
-            ctx.fillText("N8N", canvas.width / 2, canvas.height * 0.7);
-
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            const titleCoords = [];
-            const buttonCoords = [];
-
-            // Visible width calculation
+            
+            // Text scale logic
             const vWidth = 2 * Math.tan((camera.fov * Math.PI) / 360) * camera.position.z * camera.aspect;
             const scale = (vWidth * 0.7) / canvas.width;
 
-            // Sample pixels
+            // DRAW TITLE
+            ctx.fillStyle = 'black';
+            ctx.font = '900 200px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText("K TO THE K", canvas.width / 2, 400);
+
+            // DRAW BUTTON RECTANGLE
+            ctx.fillRect(canvas.width / 2 - 200, 620, 400, 150);
+
+            // DRAW BUTTON TEXT (White on Black)
+            ctx.fillStyle = 'white';
+            ctx.font = '700 80px sans-serif';
+            ctx.fillText("N8N", canvas.width / 2, 720);
+
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            const titlePoints = [];
+            const buttonPoints = [];
+
             for (let y = 0; y < canvas.height; y += 3) {
                 for (let x = 0; x < canvas.width; x += 3) {
                     const i = (y * canvas.width + x) * 4;
-                    
-                    // Main Title (Black pixels in the upper area)
-                    if (y < canvas.height * 0.5 && imageData[i] < 128) {
-                        titleCoords.push({
+                    const r = imgData[i];
+                    const g = imgData[i+1];
+                    const b = imgData[i+2];
+
+                    if (r < 200 || g < 200 || b < 200) { // Not white
+                        const pt = {
                             x: (x - canvas.width / 2) * scale,
-                            y: (canvas.height / 2 - y) * scale
-                        });
-                    }
-                    // Button (White pixels in the lower area)
-                    if (y > canvas.height * 0.5 && imageData[i] > 128) {
-                        buttonCoords.push({
-                            x: (x - canvas.width / 2) * scale,
-                            y: (canvas.height / 2 - y) * scale
-                        });
+                            y: (canvas.height / 2 - y) * scale,
+                            isButton: (y > 550) // Categorize based on vertical position
+                        };
+                        if (pt.isButton) buttonPoints.push(pt);
+                        else titlePoints.push(pt);
                     }
                 }
             }
 
-            // Distribute particles to target coords
-            const colors = points.geometry.attributes.color.array;
-            
             for (let i = 0; i < particleCount; i++) {
-                if (i < titleCoords.length) {
-                    // Particles mapping to the main title (BLACK)
-                    targets[i * 3] = titleCoords[i].x;
-                    targets[i * 3 + 1] = titleCoords[i].y;
-                    // Colors are initialized black, no need to update
+                let target;
+                if (i < titlePoints.length) {
+                    target = titlePoints[i];
+                    colors[i * 3] = 0; colors[i * 3 + 1] = 0; colors[i * 3 + 2] = 0; // Black
                 } else {
-                    // Particles mapping to the inverted button (WHITE)
-                    const bTarget = buttonCoords[i % buttonCoords.length];
-                    targets[i * 3] = bTarget.x;
-                    targets[i * 3 + 1] = bTarget.y;
-                    
-                    // Set color to pure white (1,1,1)
-                    colors[i * 3] = 1;
-                    colors[i * 3 + 1] = 1;
-                    colors[i * 3 + 2] = 1;
-                    
-                    buttonParticleIndices.push(i); // Mark this particle for glitching
+                    target = buttonPoints[i % buttonPoints.length];
+                    colors[i * 3] = 0.5; colors[i * 3 + 1] = 0.5; colors[i * 3 + 2] = 0.5; // Grayish
+                    buttonIndices.push(i);
                 }
+                targets[i * 3] = target.x;
+                targets[i * 3 + 1] = target.y;
                 targets[i * 3 + 2] = (Math.random() - 0.5) * 0.1;
             }
             points.geometry.attributes.color.needsUpdate = true;
@@ -201,35 +157,25 @@
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             
-            // Limit the main rotation bounds
-            targetRotation.y = mouse.x * 0.4;
-            targetRotation.x = -mouse.y * 0.4;
+            targetRotation.y = mouse.x * 0.3;
+            targetRotation.x = -mouse.y * 0.3;
 
-            // Raycasting check for the button area (roughly y < 0)
-            if (mouse.y < -0.15 && mouse.y > -0.7 && Math.abs(mouse.x) < 0.25) {
-                if (!isOverButton) {
-                    document.body.style.cursor = 'pointer'; // Button hover cursor
+            // Check if hovering over N8N (lower center)
+            if (mouse.y < -0.1 && mouse.y > -0.6 && Math.abs(mouse.x) < 0.2) {
+                if(!isOverButton) {
                     isOverButton = true;
+                    document.body.style.cursor = 'pointer';
                 }
             } else {
-                if (isOverButton) {
-                    document.body.style.cursor = 'default'; // Regular cursor
+                if(isOverButton) {
                     isOverButton = false;
-                    
-                    // Stop glitching by setting targets back to original
-                    for (let i = 0; i < buttonParticleIndices.length; i++) {
-                        const index = buttonParticleIndices[i];
-                        targets[index * 3] = originalTargets[index * 3];
-                        targets[index * 3 + 1] = originalTargets[index * 3 + 1];
-                    }
+                    document.body.style.cursor = 'default';
                 }
             }
         }
 
         function onClick() {
-            if (isOverButton) {
-                window.location.href = "https://n8n.ktothek.com";
-            }
+            if (isOverButton) window.location.href = "https://n8n.ktothek.com";
         }
 
         function onWindowResize() {
@@ -241,27 +187,27 @@
         function animate() {
             requestAnimationFrame(animate);
             
-            // Smooth logo parallax tilt
             points.rotation.y += (targetRotation.y - points.rotation.y) * 0.05;
             points.rotation.x += (targetRotation.x - points.rotation.x) * 0.05;
 
-            // Active Glitch/Jitter logic when hovered
-            if (isOverButton && originalTargets[0] !== 0) {
-                for (let i = 0; i < buttonParticleIndices.length; i++) {
-                    const index = buttonParticleIndices[i];
-                    // Add random high-frequency jitter (glitch) to target x/y
-                    targets[index * 3] = originalTargets[index * 3] + (Math.random() - 0.5) * 0.15;
-                    targets[index * 3 + 1] = originalTargets[index * 3 + 1] + (Math.random() - 0.5) * 0.15;
-                }
-            }
-
-            // Lerp all particles toward their (potentially jittering) targets
             const pos = points.geometry.attributes.position.array;
-            for(let i=0; i<particleCount*3; i++) {
-                pos[i] += (targets[i] - pos[i]) * 0.06;
-            }
-            points.geometry.attributes.position.needsUpdate = true;
+            
+            for(let i = 0; i < particleCount; i++) {
+                let tx = targets[i * 3];
+                let ty = targets[i * 3 + 1];
 
+                // If hovering over button, add high-frequency jitter to button particles
+                if (isOverButton && buttonIndices.includes(i)) {
+                    tx += (Math.random() - 0.5) * 0.2;
+                    ty += (Math.random() - 0.5) * 0.2;
+                }
+
+                pos[i * 3] += (tx - pos[i * 3]) * 0.08;
+                pos[i * 3 + 1] += (ty - pos[i * 3 + 1]) * 0.08;
+                pos[i * 3 + 2] += (targets[i * 3 + 2] - pos[i * 3 + 2]) * 0.08;
+            }
+            
+            points.geometry.attributes.position.needsUpdate = true;
             renderer.render(scene, camera);
         }
     </script>
