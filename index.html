@@ -3,188 +3,187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K to the K | Magnetic Flow</title>
+    <title>K to the K</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #fff; }
-        
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: white;
+        }
+
         /* The Vignette Effect */
         #vignette {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             pointer-events: none;
-            z-index: 5;
-            background: radial-gradient(circle, rgba(255,255,255,0) 50%, rgba(0,0,0,0.05) 100%);
+            background: radial-gradient(circle, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%);
+            z-index: 10;
         }
 
-        #canvas-container { position: fixed; inset: 0; z-index: 1; }
-        
-        /* Hidden link for SEO/Accessibility since the button is rendered in 3D */
-        .hidden-link { position: absolute; opacity: 0; pointer-events: none; }
+        canvas {
+            display: block;
+        }
+
+        /* Hidden link for SEO and accessibility */
+        #n8n-link {
+            position: absolute;
+            left: 50%;
+            top: 65%;
+            transform: translate(-50%, -50%);
+            width: 150px;
+            height: 60px;
+            z-index: 20;
+            cursor: pointer;
+            text-decoration: none;
+            color: transparent;
+        }
     </style>
 </head>
 <body>
 
     <div id="vignette"></div>
-    <div id="canvas-container"></div>
-    <a href="https://n8n.ktothek.com" class="hidden-link">n8n</a>
+    <a href="https://n8n.ktothek.com" id="n8n-link">N8N</a>
+    <canvas id="canvas"></canvas>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let fallingObjects = [];
+        
+        const config = {
+            particleSpacing: 4,
+            mouseRadius: 100,
+            repulsionStrength: 5,
+            returnSpeed: 0.1,
+            friction: 0.9,
+            objectFrequency: 0.02
+        };
+
+        window.addEventListener('resize', init);
+
+        class Particle {
+            constructor(x, y) {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.destX = x;
+                this.destY = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.size = 1.5;
             }
-        }
-    </script>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
-        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+            draw() {
+                ctx.fillStyle = '#222';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
-        let scene, camera, renderer, particles;
-        const particleData = [];
-        const fallingObjects = [];
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
+            update(obstacles) {
+                // Return to home force
+                let dx = this.destX - this.x;
+                let dy = this.destY - this.y;
+                this.vx += dx * config.returnSpeed;
+                this.vy += dy * config.returnSpeed;
 
-        init();
-
-        async function init() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xffffff);
-
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 60;
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-            const loader = new FontLoader();
-            loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', (font) => {
-                createParticleText(font, "K to the K", 0, 5);
-                createParticleText(font, "N8N", -15, 3, true); // The button
-                setupFallingObjects();
-                animate();
-            });
-
-            window.addEventListener('mousemove', (e) => {
-                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-            });
-
-            window.addEventListener('click', (e) => {
-                // Check if clicking near the N8N text area
-                if (Math.abs(mouse.x) < 0.2 && mouse.y < -0.15 && mouse.y > -0.35) {
-                    window.location.href = "https://n8n.ktothek.com";
-                }
-            });
-        }
-
-        function createParticleText(font, text, yOffset, size, isButton = false) {
-            const geo = new TextGeometry(text, { font, size, height: 0, curveSegments: 4 });
-            geo.center();
-            
-            // Sample points from the geometry
-            const posAttr = geo.getAttribute('position');
-            const step = isButton ? 2 : 1; // density
-            
-            for (let i = 0; i < posAttr.count; i += step) {
-                const x = posAttr.getX(i);
-                const y = posAttr.getY(i) + yOffset;
-                const z = posAttr.getZ(i);
-
-                particleData.push({
-                    home: new THREE.Vector3(x, y, z),
-                    curr: new THREE.Vector3(x, y, z),
-                    vel: new THREE.Vector3(),
-                    color: isButton ? new THREE.Color(0x333333) : new THREE.Color(0x000000)
+                // Obstacle repulsion
+                obstacles.forEach(obj => {
+                    let ox = obj.x - this.x;
+                    let oy = obj.y - this.y;
+                    let dist = Math.sqrt(ox * ox + oy * oy);
+                    if (dist < obj.radius) {
+                        let angle = Math.atan2(oy, ox);
+                        let force = (obj.radius - dist) / obj.radius;
+                        this.vx -= Math.cos(angle) * force * 20;
+                        this.vy -= Math.sin(angle) * force * 20;
+                    }
                 });
+
+                this.vx *= config.friction;
+                this.vy *= config.friction;
+                this.x += this.vx;
+                this.y += this.vy;
             }
-
-            const pointsGeo = new THREE.BufferGeometry();
-            updateGeometry(pointsGeo);
-
-            const mat = new THREE.PointsMaterial({ size: 0.15, vertexColors: true });
-            particles = new THREE.Points(pointsGeo, mat);
-            scene.add(particles);
         }
 
-        function setupFallingObjects() {
-            const geometries = [
-                new THREE.IcosahedronGeometry(2),
-                new THREE.BoxGeometry(2, 2, 2),
-                new THREE.TorusGeometry(1.5, 0.5, 8, 16)
-            ];
+        class FallingObject {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = -50;
+                this.vy = Math.random() * 2 + 1;
+                this.radius = Math.random() * 30 + 20;
+                this.color = `rgba(0,0,0,${Math.random() * 0.1 + 0.05})`;
+            }
+
+            update() {
+                this.y += this.vy;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function init() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            particles = [];
+
+            // Draw text hiddenly to sample pixels
+            ctx.fillStyle = "black";
+            ctx.font = "bold 80px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("K to the K", canvas.width / 2, canvas.height / 2);
             
-            for (let i = 0; i < 5; i++) {
-                const mesh = new THREE.Mesh(
-                    geometries[Math.floor(Math.random() * geometries.length)],
-                    new THREE.MeshBasicMaterial({ color: 0xeeeeee, wireframe: true })
-                );
-                resetObject(mesh);
-                scene.add(mesh);
-                fallingObjects.push(mesh);
+            ctx.font = "bold 40px Arial";
+            ctx.fillText("N8N", canvas.width / 2, canvas.height * 0.65);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < canvas.height; y += config.particleSpacing) {
+                for (let x = 0; x < canvas.width; x += config.particleSpacing) {
+                    const index = (x + y * canvas.width) * 4;
+                    if (imageData[index + 3] > 128) {
+                        particles.push(new Particle(x, y));
+                    }
+                }
             }
-        }
-
-        function resetObject(obj) {
-            obj.position.y = 40 + Math.random() * 40;
-            obj.position.x = (Math.random() - 0.5) * 60;
-            obj.position.z = (Math.random() - 0.5) * 10;
-            obj.userData.speed = 0.2 + Math.random() * 0.3;
-        }
-
-        function updateGeometry(geo) {
-            const positions = new Float32Array(particleData.length * 3);
-            const colors = new Float32Array(particleData.length * 3);
-            particleData.forEach((p, i) => {
-                positions[i * 3] = p.curr.x;
-                positions[i * 3 + 1] = p.curr.y;
-                positions[i * 3 + 2] = p.curr.z;
-                colors[i * 3] = p.color.r;
-                colors[i * 3 + 1] = p.color.g;
-                colors[i * 3 + 2] = p.color.b;
-            });
-            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
         }
 
         function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (Math.random() < config.objectFrequency) {
+                fallingObjects.push(new FallingObject());
+            }
+
+            fallingObjects.forEach((obj, i) => {
+                obj.update();
+                obj.draw();
+                if (obj.y > canvas.height + 50) fallingObjects.splice(i, 1);
+            });
+
+            particles.forEach(p => {
+                p.update(fallingObjects);
+                p.draw();
+            });
+
             requestAnimationFrame(animate);
-            
-            fallingObjects.forEach(obj => {
-                obj.position.y -= obj.userData.speed;
-                obj.rotation.x += 0.01;
-                obj.rotation.z += 0.01;
-                if (obj.position.y < -40) resetObject(obj);
-
-                // Particle Interaction Logic
-                particleData.forEach(p => {
-                    const dist = p.curr.distanceTo(obj.position);
-                    if (dist < 6) {
-                        const dir = new THREE.Vector3().subVectors(p.curr, obj.position).normalize();
-                        const force = (6 - dist) * 0.5;
-                        p.vel.add(dir.multiplyScalar(force));
-                    }
-                });
-            });
-
-            // Physics Update
-            particleData.forEach(p => {
-                // Spring back to home
-                const spring = new THREE.Vector3().subVectors(p.home, p.curr).multiplyScalar(0.05);
-                p.vel.add(spring);
-                p.vel.multiplyScalar(0.9); // Dampening
-                p.curr.add(p.vel);
-            });
-
-            if (particles) updateGeometry(particles.geometry);
-            
-            renderer.render(scene, camera);
         }
+
+        init();
+        animate();
     </script>
 </body>
 </html>
