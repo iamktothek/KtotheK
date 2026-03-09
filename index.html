@@ -15,7 +15,7 @@
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        let width, height, time = 0;
+        let width, height;
         
         let particles = [];
         const mouse = { x: -1000, y: -1000 };
@@ -23,59 +23,61 @@
 
         class Particle {
             constructor(tx, ty, isBtn) {
-                // Massive scatter at start - completely covering the viewport
-                this.x = Math.random() * window.innerWidth;
-                this.y = Math.random() * window.innerHeight;
-                if(Math.random() > 0.5) this.x = Math.random() > 0.5 ? -100 : window.innerWidth + 100;
-                
+                // SPAWN LOGIC: Drift in from the edges like a cloud
+                const edge = Math.floor(Math.random() * 4);
+                if (edge === 0) { this.x = Math.random() * window.innerWidth; this.y = -50; }
+                else if (edge === 1) { this.x = window.innerWidth + 50; this.y = Math.random() * window.innerHeight; }
+                else if (edge === 2) { this.x = Math.random() * window.innerWidth; this.y = window.innerHeight + 50; }
+                else { this.x = -50; this.y = Math.random() * window.innerHeight; }
+
                 this.tx = tx;
                 this.ty = ty;
                 this.isBtn = isBtn;
                 
-                // Randomized size for non-uniform texture
-                this.size = isBtn ? 1.5 : (Math.random() * 1.6 + 0.6); 
+                // DUST SIZE VARIANCE: Much wider range for organic texture
+                // 0.2px is almost invisible, 2.5px is a distinct grain
+                this.size = Math.random() * Math.random() * 2.5 + 0.2; 
                 
-                // Assembly speed: Constant and slow (no bounce)
-                this.speed = 0.02 + Math.random() * 0.02;
-                // Unique offset for the "breathing" effect
-                this.angle = Math.random() * Math.PI * 2;
+                // ASYMPTOTIC DRIFT: Constant pull, no bounce
+                this.ease = 0.01 + Math.random() * 0.02; 
+                this.driftAngle = Math.random() * Math.PI * 2;
+                this.driftSpeed = 0.2 + Math.random() * 0.5;
             }
 
             update() {
-                // Subtle "Breathing" drift logic
-                this.angle += 0.02;
-                let driftX = Math.cos(this.angle) * 0.8;
-                let driftY = Math.sin(this.angle) * 0.8;
+                // Subtle organic wavering
+                this.driftAngle += 0.01;
+                const ox = Math.cos(this.driftAngle) * this.driftSpeed;
+                const oy = Math.sin(this.driftAngle) * this.driftSpeed;
 
-                let targetX = this.tx + driftX;
-                let targetY = this.ty + driftY;
+                let targetX = this.tx + ox;
+                let targetY = this.ty + oy;
 
-                // 1. Subtle Repulsion (Text only)
+                // Subtle Repulsion
                 if (!this.isBtn) {
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
-                    const distSq = dx * dx + dy * dy;
-                    if (distSq < 2500) { 
-                        const dist = Math.sqrt(distSq);
-                        const force = (50 - dist) / 50;
-                        targetX += (dx / dist) * force * 15; 
-                        targetY += (dy / dist) * force * 15;
+                    const dSq = dx * dx + dy * dy;
+                    if (dSq < 2000) { 
+                        const d = Math.sqrt(dSq);
+                        const f = (45 - d) / 45;
+                        targetX += (dx / d) * f * 12; 
+                        targetY += (dy / d) * f * 12;
                     }
                 }
 
-                // 2. Glitch effect (Button only)
                 if (this.isBtn && isOverButton) {
-                    targetX += (Math.random() - 0.5) * 6;
-                    targetY += (Math.random() - 0.5) * 6;
+                    targetX += (Math.random() - 0.5) * 4;
+                    targetY += (Math.random() - 0.5) * 4;
                 }
 
-                // 3. Linear Smooth Damping (Replaces Pulsating Physics)
-                this.x += (targetX - this.x) * this.speed;
-                this.y += (targetY - this.y) * this.speed;
+                // Smooth Glide
+                this.x += (targetX - this.x) * this.ease;
+                this.y += (targetY - this.y) * this.ease;
             }
 
             draw() {
-                ctx.fillStyle = '#000000';
+                ctx.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.3 + 0.6) + ')'; // Random opacity for grain
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
                 ctx.fill();
@@ -84,61 +86,51 @@
 
         function init() {
             resize();
-            const tempCanvas = document.createElement('canvas');
-            const tCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = 2000;
-            tempCanvas.height = 1000;
+            const tCvs = document.createElement('canvas');
+            const tCtx = tCvs.getContext('2d');
+            tCvs.width = 2000; tCvs.height = 1000;
 
-            tCtx.fillStyle = 'white';
-            tCtx.fillRect(0, 0, 2000, 1000);
-            
+            tCtx.fillStyle = 'white'; tCtx.fillRect(0, 0, 2000, 1000);
             tCtx.fillStyle = 'black';
-            tCtx.font = '900 230px system-ui, -apple-system, sans-serif'; 
+            tCtx.font = '900 230px system-ui, sans-serif'; 
             tCtx.textAlign = 'center';
             tCtx.textBaseline = 'middle';
             tCtx.fillText("K to the K", 1000, 380);
 
-            // Centered Pill Button
-            const btnW = 440;
-            const btnH = 150;
-            const btnX = 1000 - (btnW / 2);
-            const btnY = 580;
-            
+            // Pill Button
+            const bW = 440, bH = 150, bX = 1000 - bW/2, bY = 580;
             tCtx.beginPath();
-            tCtx.roundRect(btnX, btnY, btnW, btnH, 75);
+            tCtx.roundRect(bX, bY, bW, bH, 75);
             tCtx.fill();
 
             tCtx.fillStyle = 'white';
             tCtx.font = 'bold 85px system-ui, sans-serif'; 
-            tCtx.fillText("N8N", 1000, btnY + (btnH / 2) + 5);
+            tCtx.fillText("N8N", 1000, bY + bH/2 + 5);
 
-            const data = tCtx.getImageData(0, 0, 2000, 1000).data;
-            
-            const step = 3; 
+            const img = tCtx.getImageData(0, 0, 2000, 1000).data;
             const points = [];
-
-            for (let y = 0; y < 1000; y += step) {
-                for (let x = 0; x < 2000; x += step) {
-                    const i = (y * 2000 + x) * 4;
-                    if (data[i] < 200) {
-                        points.push({
-                            x: x + (Math.random() - 0.5) * 2,
-                            y: y + (Math.random() - 0.5) * 2,
-                            isBtn: y > 500
-                        });
+            
+            // DITHERED SAMPLING: Lower step but with random probability
+            for (let y = 0; y < 1000; y += 2) {
+                for (let x = 0; x < 2000; x += 2) {
+                    if (img[(y * 2000 + x) * 4] < 200) {
+                        // Only create a particle 40% of the time for a "stippled" look
+                        if (Math.random() > 0.6) {
+                            points.push({
+                                x: x + (Math.random() - 0.5) * 4,
+                                y: y + (Math.random() - 0.5) * 4,
+                                isBtn: y > 500
+                            });
+                        }
                     }
                 }
             }
 
-            const scale = (width * 0.7) / 2000; 
-            const offsetX = (width - (2000 * scale)) / 2;
-            const offsetY = (height - (1000 * scale)) / 2;
+            const scale = (width * 0.75) / 2000; 
+            const ox = (width - (2000 * scale)) / 2;
+            const oy = (height - (1000 * scale)) / 2;
 
-            particles = points.map(p => new Particle(
-                p.x * scale + offsetX, 
-                p.y * scale + offsetY, 
-                p.isBtn
-            ));
+            particles = points.map(p => new Particle(p.x * scale + ox, p.y * scale + oy, p.isBtn));
         }
 
         function resize() {
@@ -147,9 +139,7 @@
         }
 
         function animate() {
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, width, height);
-            
+            ctx.clearRect(0, 0, width, height);
             for (let i = 0; i < particles.length; i++) {
                 particles[i].update();
                 particles[i].draw();
@@ -158,35 +148,18 @@
         }
 
         window.addEventListener('mousemove', e => {
-            mouse.x = e.clientX;
-            mouse.y = e.clientY;
-
-            const scale = (width * 0.7) / 2000;
-            const btnCenterY = (655 * scale) + (height - (1000 * scale)) / 2;
-            const btnCenterX = width / 2;
-            const btnW = 440 * scale;
-            const btnH = 150 * scale;
-
-            isOverButton = (
-                mouse.x > btnCenterX - btnW/2 && 
-                mouse.x < btnCenterX + btnW/2 && 
-                mouse.y > btnCenterY - btnH/2 && 
-                mouse.y < btnCenterY + btnH/2
-            );
+            mouse.x = e.clientX; mouse.y = e.clientY;
+            const sc = (width * 0.75) / 2000;
+            const bCY = (655 * sc) + (height - (1000 * sc)) / 2;
+            const bW = 440 * sc, bH = 150 * sc;
+            isOverButton = (mouse.x > width/2 - bW/2 && mouse.x < width/2 + bW/2 && mouse.y > bCY - bH/2 && mouse.y < bCY + bH/2);
             canvas.style.cursor = isOverButton ? 'pointer' : 'default';
         });
 
-        window.addEventListener('click', () => {
-            if (isOverButton) window.location.href = "https://n8n.ktothek.com";
-        });
+        window.addEventListener('click', () => { if (isOverButton) window.location.href = "https://n8n.ktothek.com"; });
+        window.addEventListener('resize', () => { resize(); init(); });
 
-        window.addEventListener('resize', () => {
-            resize();
-            init(); 
-        });
-
-        init();
-        animate();
+        init(); animate();
     </script>
 </body>
 </html>
