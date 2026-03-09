@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K to the K</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #ffffff; font-family: 'Courier New', Courier, monospace; }
+        body { margin: 0; overflow: hidden; background-color: #ffffff; font-family: sans-serif; touch-action: none; }
         canvas { display: block; }
         
         #ui-layer {
@@ -22,14 +22,16 @@
         }
 
         #n8n-link {
-            margin-top: 180px; /* Pushed down to clear the 3D text */
+            position: absolute;
+            bottom: 15%; /* Pinned relative to screen height */
             padding: 12px 30px;
             border: 2px solid #000;
             background: #fff;
             color: #000;
             text-decoration: none;
             font-weight: bold;
-            font-size: 1.2rem;
+            font-size: 1rem;
+            letter-spacing: 3px;
             opacity: 0; 
             transition: all 0.4s ease;
             pointer-events: auto;
@@ -39,7 +41,6 @@
         #n8n-link:hover {
             background: #000;
             color: #fff;
-            transform: scale(1.05);
         }
     </style>
 </head>
@@ -54,9 +55,9 @@
 
     <script>
         let scene, camera, renderer, points;
-        const particleCount = 12000; // Increased density
-        
-        // We'll use these to animate
+        let mouseX = 0, mouseY = 0;
+        let targetRotationX = 0, targetRotationY = 0;
+        const particleCount = 15000;
         const positions = new Float32Array(particleCount * 3);
         const targets = new Float32Array(particleCount * 3);
 
@@ -65,110 +66,133 @@
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xffffff); // White Background
+            scene.background = new THREE.Color(0xffffff);
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 8; // Pulled back slightly so text isn't cut off
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 10;
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // 1. Initialize particles in random scattered positions
+            // Initial random scatter
             for (let i = 0; i < particleCount; i++) {
-                positions[i * 3] = (Math.random() - 0.5) * 25;
-                positions[i * 3 + 1] = (Math.random() - 0.5) * 25;
-                positions[i * 3 + 2] = (Math.random() - 0.5) * 10;
+                positions[i * 3] = (Math.random() - 0.5) * 30;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 30;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 15;
             }
 
             const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-            // Black particles
             const material = new THREE.PointsMaterial({
-                size: 0.035,
-                color: 0x000000, 
+                size: 0.03,
+                color: 0x000000,
                 transparent: true,
-                opacity: 0.9
+                opacity: 0.8
             });
 
             points = new THREE.Points(geometry, material);
             scene.add(points);
 
-            // 2. Generate the "K to the K" map
-            const textCoords = getTextImageData("K TO THE K");
-            
-            for (let i = 0; i < particleCount; i++) {
-                const target = textCoords[i % textCoords.length];
-                targets[i * 3] = target.x;
-                targets[i * 3 + 1] = target.y;
-                targets[i * 3 + 2] = (Math.random() - 0.5) * 0.5; // Slight depth
-            }
+            generateTextTargets();
 
-            // 3. The "Assembly" Animation
+            // Assemble Animation
             gsap.to(positions, {
                 endArray: targets,
-                duration: 3.5,
-                ease: "expo.out",
-                onUpdate: () => {
-                    points.geometry.attributes.position.needsUpdate = true;
-                },
+                duration: 4,
+                ease: "power4.out",
+                onUpdate: () => { points.geometry.attributes.position.needsUpdate = true; },
                 onComplete: () => {
-                    gsap.to("#n8n-link", { opacity: 1, duration: 1.5 });
+                    gsap.to("#n8n-link", { opacity: 1, duration: 1 });
                 }
             });
+
+            // Listeners for Mouse and Touch
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('touchmove', onTouchMove);
+            window.addEventListener('resize', onWindowResize);
         }
 
-        function getTextImageData(text) {
+        function generateTextTargets() {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 1200;
+            canvas.width = 1600;
             canvas.height = 400;
 
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
+            // Adjust font size based on screen width
+            const fontSize = window.innerWidth < 600 ? 180 : 220;
             ctx.fillStyle = 'black';
-            // Using a system font that is heavy for better particle density
-            ctx.font = '900 160px sans-serif'; 
+            ctx.font = `900 ${fontSize}px sans-serif`; 
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+            ctx.fillText("K TO THE K", canvas.width / 2, canvas.height / 2);
 
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
             const coords = [];
 
+            // Scale factor to fit text to screen width
+            const scale = Math.min(window.innerWidth / 1400, 1) * 0.012;
+
             for (let y = 0; y < canvas.height; y += 2) {
                 for (let x = 0; x < canvas.width; x += 2) {
                     const i = (y * canvas.width + x) * 4;
-                    // If the pixel is dark, add a coordinate
                     if (imageData[i] < 128) {
                         coords.push({
-                            x: (x - canvas.width / 2) * 0.012,
-                            y: (canvas.height / 2 - y) * 0.012
+                            x: (x - canvas.width / 2) * scale,
+                            y: (canvas.height / 2 - y) * scale
                         });
                     }
                 }
             }
-            return coords;
+
+            for (let i = 0; i < particleCount; i++) {
+                const target = coords[i % coords.length];
+                targets[i * 3] = target.x;
+                targets[i * 3 + 1] = target.y;
+                targets[i * 3 + 2] = (Math.random() - 0.5) * 0.2; 
+            }
+        }
+
+        function onMouseMove(event) {
+            // Convert mouse position to a range of -1 to 1
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            // Set target rotation (limited to ~25 degrees)
+            targetRotationY = mouseX * 0.4;
+            targetRotationX = mouseY * 0.4;
+        }
+
+        function onTouchMove(event) {
+            if (event.touches.length > 0) {
+                mouseX = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+                mouseY = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+                targetRotationY = mouseX * 0.4;
+                targetRotationX = mouseY * 0.4;
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            generateTextTargets(); // Recalculate to keep it fitting the width
         }
 
         function animate() {
             requestAnimationFrame(animate);
             
-            // Subtle breathing movement
-            const time = Date.now() * 0.0005;
-            points.rotation.y = Math.sin(time) * 0.05;
-            points.rotation.x = Math.cos(time) * 0.03;
+            // Smoothly interpolate rotation for a premium "heavy" feel (Lerp)
+            points.rotation.y += (targetRotationY - points.rotation.y) * 0.05;
+            points.rotation.x += (targetRotationX - points.rotation.x) * 0.05;
 
             renderer.render(scene, camera);
         }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
 </html>
