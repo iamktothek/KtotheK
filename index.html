@@ -13,54 +13,67 @@
             --text-color: #000000;
             --glitch-cyan: #00f2ff;
             --glitch-magenta: #ff00c1;
-            --scanline-color: rgba(0, 0, 0, 0.15);
+            --scanline-color: rgba(0, 0, 0, 0.2);
         }
 
-        /* --- THE BOOT SEQUENCE (Black Screen) --- */
-        #loader {
+        /* --- THE MECHANICAL SHUTTER --- */
+        #loader-wrapper {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #000000;
             z-index: 9999;
             display: flex;
-            align-items: center; justify-content: center;
-            opacity: 1;
-            transition: opacity 1.5s ease-in-out;
+            flex-direction: column;
+            pointer-events: none;
         }
 
+        .shutter {
+            flex: 1;
+            background: #000;
+            width: 100%;
+            transition: transform 1.2s cubic-bezier(0.85, 0, 0.15, 1);
+        }
+
+        /* Top shutter slides UP, Bottom slides DOWN */
+        .loaded #shutter-top { transform: translateY(-100%); }
+        .loaded #shutter-bottom { transform: translateY(100%); }
+
+        /* The CRT Power Line */
         .loader-beam {
+            position: absolute;
+            top: 50%; left: 0;
             width: 0%; height: 2px;
             background: #fff;
             box-shadow: 0 0 15px #fff;
-            animation: beamExpand 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            z-index: 10000;
+            transform: translateY(-50%);
+            animation: beamExpand 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         @keyframes beamExpand {
             0% { width: 0%; opacity: 0; }
-            50% { opacity: 1; }
             100% { width: 100%; opacity: 1; }
         }
 
-        /* Classes controlled by JS */
-        .hide-loader { opacity: 0 !important; pointer-events: none; }
+        /* Hide beam when shutters open */
+        .loaded .loader-beam { opacity: 0; transition: opacity 0.3s; }
 
-        /* --- VHS OVERLAY --- */
+        /* --- VHS EFFECTS --- */
         .vhs-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.04));
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
             background-size: 100% 4px, 4px 100%;
             z-index: 40;
             pointer-events: none;
-            opacity: 0.2;
+            opacity: 0.25;
             animation: vhs-flicker 0.1s infinite;
         }
 
         @keyframes vhs-flicker {
-            0% { opacity: 0.15; }
-            50% { opacity: 0.2; }
-            100% { opacity: 0.18; }
+            0% { opacity: 0.2; }
+            50% { opacity: 0.28; }
+            100% { opacity: 0.24; }
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; cursor: default; }
@@ -74,13 +87,13 @@
             overflow: hidden; position: relative;
         }
 
-        /* --- HEAVY SCANLINE --- */
+        /* --- THE HEAVY SCANLINE --- */
         #scanline {
             position: absolute;
-            top: -20px; left: 0; width: 100%; height: 30px; /* Thicker for more impact */
+            top: -30px; left: 0; width: 100%; height: 40px;
             background: var(--scanline-color);
             z-index: 20; pointer-events: none;
-            box-shadow: 0 0 20px rgba(0,0,0,0.08);
+            box-shadow: 0 0 25px rgba(0,0,0,0.1);
         }
 
         .container { text-align: center; z-index: 5; }
@@ -120,27 +133,26 @@
             100% { clip-path: inset(10% 0 70% 0); transform: translate(-3px, -2px); }
         }
 
-        /* --- THE BUTTON SNAP-BACK --- */
+        /* --- AGGRESSIVE BUTTON PUSH --- */
         .button-wrapper { 
             margin-top: 5rem; 
             position: relative; 
             display: inline-block;
-            /* Extra springy snap-back */
-            transition: transform 0.8s cubic-bezier(0.5, 1.7, 0.5, 1);
+            transition: transform 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             will-change: transform;
         }
 
-        /* The physical push downwards */
+        /* Aggressive squash and drop */
         .button-wrapper.active {
-            transform: translateY(20px) scale(0.96);
-            transition: transform 0.15s ease-out; /* Fast descent */
+            transform: translateY(40px) scaleY(0.85) scaleX(1.05);
+            transition: transform 0.1s ease-out; 
         }
 
         .n8n-link {
             display: inline-block; text-decoration: none;
             color: var(--text-color); font-weight: 900;
             font-size: 0.85rem; letter-spacing: 0.4em;
-            padding: 20px 60px; border: 3px solid var(--text-color);
+            padding: 22px 65px; border: 3px solid var(--text-color);
             background: var(--bg-color); cursor: pointer;
             transition: background 0.3s, color 0.3s;
         }
@@ -159,8 +171,10 @@
 </head>
 <body>
 
-    <div id="loader">
+    <div id="loader-wrapper">
         <div class="loader-beam"></div>
+        <div class="shutter" id="shutter-top"></div>
+        <div class="shutter" id="shutter-bottom"></div>
     </div>
 
     <div class="vhs-overlay"></div>
@@ -178,7 +192,7 @@
         const text = "K TO THE K";
         const container = document.getElementById('glitch-container');
         const buttonWrapper = document.getElementById('n8n-wrapper');
-        const loader = document.getElementById('loader');
+        const loaderWrapper = document.getElementById('loader-wrapper');
         const chars = [];
 
         text.split('').forEach(char => {
@@ -196,12 +210,12 @@
         });
 
         const interactableObjects = [...chars, buttonWrapper];
-        let scanPos = -150;
-        const speed = 2.5; // Slower, heavier scanline
+        let scanPos = -200;
+        const speed = 2.5; 
 
         function animateScan() {
             scanPos += speed;
-            if (scanPos > window.innerHeight + 150) scanPos = -150;
+            if (scanPos > window.innerHeight + 200) scanPos = -200;
             const scanline = document.getElementById('scanline');
             if(scanline) scanline.style.top = scanPos + 'px';
 
@@ -216,14 +230,13 @@
             requestAnimationFrame(animateScan);
         }
 
-        // Start animation immediately
         animateScan();
 
-        // Reveal Logic: Force the black screen to stay until the beam is "done"
+        // Mechanical Reveal Logic
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
-                loader.classList.add('hide-loader');
-            }, 1500); // 1.5 seconds of black + beam before fade-out
+                loaderWrapper.classList.add('loaded');
+            }, 1200); // Give the beam time to span the width
         });
     </script>
 </body>
