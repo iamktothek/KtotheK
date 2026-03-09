@@ -28,7 +28,8 @@
                 this.tx = tx;
                 this.ty = ty;
                 this.isBtn = isBtn;
-                this.size = isBtn ? 1.8 : 2.2; // Smaller particles for higher density
+                // Tiny particles for high-density look
+                this.size = isBtn ? 1.2 : 1.5; 
                 this.vx = 0;
                 this.vy = 0;
             }
@@ -37,16 +38,16 @@
                 let targetX = this.tx;
                 let targetY = this.ty;
 
-                // 1. Reduced Mouse Repulsion (Text only)
+                // 1. Subtle Repulsion (Text only)
                 if (!this.isBtn) {
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
                     const distSq = dx * dx + dy * dy;
-                    if (distSq < 3000) { // Reduced radius (was 6000)
+                    if (distSq < 2500) { // Radius threshold
                         const dist = Math.sqrt(distSq);
-                        const force = (55 - dist) / 55; // Reduced reach
-                        targetX += (dx / dist) * force * 35; // Reduced force (was 100)
-                        targetY += (dy / dist) * force * 35;
+                        const force = (50 - dist) / 50;
+                        targetX += (dx / dist) * force * 25; // Gentle push
+                        targetY += (dy / dist) * force * 25;
                     }
                 }
 
@@ -56,11 +57,9 @@
                     targetY += (Math.random() - 0.5) * 5;
                 }
 
-                // 3. Spring Physics
-                this.vx = (targetX - this.x) * 0.1; // Snappier return
-                this.vy = (targetY - this.y) * 0.1;
-                this.x += this.vx;
-                this.y += this.vy;
+                // 3. Physics return
+                this.x += (targetX - this.x) * 0.07;
+                this.y += (targetY - this.y) * 0.07;
             }
 
             draw() {
@@ -80,18 +79,20 @@
             tCtx.fillRect(0, 0, 2000, 1000);
             
             tCtx.fillStyle = 'black';
-            tCtx.font = '900 200px sans-serif'; // Heavier font for density
+            tCtx.font = '900 220px sans-serif'; 
             tCtx.textAlign = 'center';
             tCtx.fillText("K TO THE K", 1000, 400);
 
             // Draw Button
-            tCtx.fillRect(780, 580, 440, 160);
+            tCtx.fillRect(750, 580, 500, 160);
             tCtx.fillStyle = 'white';
-            tCtx.font = 'bold 90px sans-serif';
-            tCtx.fillText("N8N", 1000, 690);
+            tCtx.font = 'bold 100px sans-serif';
+            tCtx.fillText("N8N", 1000, 700);
 
             const data = tCtx.getImageData(0, 0, 2000, 1000).data;
-            const step = 5; // Higher density (half the step size)
+            
+            // DRAMATICALLY INCREASED DENSITY
+            const step = 3; // Lower = higher density. 3 is the "sweet spot" for thousands of dots.
             const points = [];
 
             for (let y = 0; y < 1000; y += step) {
@@ -107,7 +108,7 @@
                 }
             }
 
-            const scale = (width * 0.75) / 2000; // Slightly larger fit
+            const scale = (width * 0.7) / 2000; 
             const offsetX = (width - (2000 * scale)) / 2;
             const offsetY = (height - (1000 * scale)) / 2;
 
@@ -124,7 +125,10 @@
         }
 
         function animate() {
-            ctx.clearRect(0, 0, width, height);
+            // Slight trails effect (optional, change to clearRect for clean look)
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, width, height);
+            
             for (let i = 0; i < particles.length; i++) {
                 particles[i].update();
                 particles[i].draw();
@@ -136,9 +140,9 @@
             mouse.x = e.clientX;
             mouse.y = e.clientY;
 
-            const scale = (width * 0.75) / 2000;
-            const btnLeft = (780 * scale) + (width - (2000 * scale)) / 2;
-            const btnRight = (1220 * scale) + (width - (2000 * scale)) / 2;
+            const scale = (width * 0.7) / 2000;
+            const btnLeft = (750 * scale) + (width - (2000 * scale)) / 2;
+            const btnRight = (1250 * scale) + (width - (2000 * scale)) / 2;
             const btnTop = (580 * scale) + (height - (1000 * scale)) / 2;
             const btnBottom = (740 * scale) + (height - (1000 * scale)) / 2;
 
