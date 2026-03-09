@@ -38,12 +38,30 @@ z-index:1;
 }
 
 .container{
+
 position:relative;
 z-index:2;
 text-align:center;
+
+/* glass background for readability */
+
+padding:60px 80px;
+
+background:rgba(10,10,30,0.35);
+
+backdrop-filter:blur(12px);
+-webkit-backdrop-filter:blur(12px);
+
+border-radius:20px;
+
+box-shadow:
+0 0 30px rgba(0,234,255,0.2),
+0 0 60px rgba(255,0,247,0.2);
+
 }
 
 .title{
+
 font-size:clamp(3rem,8vw,6rem);
 letter-spacing:.25em;
 
@@ -56,17 +74,21 @@ background-size:200%;
 animation:
 glowPulse 3s ease-in-out infinite,
 gradientMove 6s linear infinite;
+
 }
 
 .divider{
 width:160px;
 height:2px;
 margin:30px auto;
+
 background:linear-gradient(90deg,transparent,#00eaff,transparent);
+
 box-shadow:0 0 10px #00eaff;
 }
 
 .button{
+
 display:inline-block;
 padding:16px 42px;
 font-size:1.2rem;
@@ -79,19 +101,24 @@ border:2px solid #00eaff;
 border-radius:8px;
 
 animation:glowPulse 3s ease-in-out infinite;
+
 }
 
 .button:hover{
+
 box-shadow:
-0 0 10px #00eaff,
-0 0 30px #ff00f7,
-0 0 60px #ff00f7;
+0 0 15px #00eaff,
+0 0 35px #ff00f7,
+0 0 80px #ff00f7;
 
 color:white;
+
 }
 
 @keyframes glowPulse{
+
 0%,100%{
+
 text-shadow:
 0 0 10px #00eaff,
 0 0 20px #ff00f7;
@@ -99,8 +126,11 @@ text-shadow:
 box-shadow:
 0 0 10px #00eaff,
 0 0 20px #ff00f7;
+
 }
+
 50%{
+
 text-shadow:
 0 0 20px #00eaff,
 0 0 40px #ff00f7;
@@ -108,7 +138,9 @@ text-shadow:
 box-shadow:
 0 0 20px #00eaff,
 0 0 40px #ff00f7;
+
 }
+
 }
 
 @keyframes gradientMove{
@@ -154,42 +186,82 @@ renderer.setClearColor(0x050510)
 
 document.body.appendChild(renderer.domElement)
 
-const particleCount = 400
-const maxDistance = 1.5
+const particleCount = 500
 
 const geometry = new THREE.BufferGeometry()
-const positions = []
-const velocities = []
+
+const positions = new Float32Array(particleCount*3)
+const colors = new Float32Array(particleCount*3)
+
+const colorA = new THREE.Color("#00eaff")
+const colorB = new THREE.Color("#ff00f7")
 
 for(let i=0;i<particleCount;i++){
 
-let x=(Math.random()-0.5)*10
-let y=(Math.random()-0.5)*10
-let z=(Math.random()-0.5)*10
+let x=(Math.random()-0.5)*12
+let y=(Math.random()-0.5)*12
+let z=(Math.random()-0.5)*12
 
-positions.push(x,y,z)
+positions[i*3]=x
+positions[i*3+1]=y
+positions[i*3+2]=z
 
-velocities.push(
-(Math.random()-0.5)*0.01,
-(Math.random()-0.5)*0.01,
-(Math.random()-0.5)*0.01
-)
+let mix = Math.random()
+
+let color = colorA.clone().lerp(colorB,mix)
+
+colors[i*3]=color.r
+colors[i*3+1]=color.g
+colors[i*3+2]=color.b
 
 }
 
 geometry.setAttribute(
 'position',
-new THREE.Float32BufferAttribute(positions,3)
+new THREE.BufferAttribute(positions,3)
 )
 
+geometry.setAttribute(
+'color',
+new THREE.BufferAttribute(colors,3)
+)
+
+/* circular particle texture */
+
+const canvas = document.createElement('canvas')
+canvas.width = 64
+canvas.height = 64
+
+const ctx = canvas.getContext('2d')
+
+const gradient = ctx.createRadialGradient(
+32,32,2,
+32,32,32
+)
+
+gradient.addColorStop(0,"white")
+gradient.addColorStop(0.2,"white")
+gradient.addColorStop(0.4,"rgba(255,255,255,0.6)")
+gradient.addColorStop(1,"rgba(255,255,255,0)")
+
+ctx.fillStyle = gradient
+ctx.fillRect(0,0,64,64)
+
+const texture = new THREE.CanvasTexture(canvas)
+
 const material = new THREE.PointsMaterial({
-color:0x00eaff,
-size:0.08,
+
+size:0.15,
+map:texture,
+vertexColors:true,
 transparent:true,
+depthWrite:false,
 blending:THREE.AdditiveBlending
+
 })
 
 const particles = new THREE.Points(geometry,material)
+
 scene.add(particles)
 
 let mouseX=0
@@ -210,53 +282,12 @@ window.addEventListener("touchmove",e=>{
 updatePointer(e.touches[0].clientX,e.touches[0].clientY)
 })
 
-window.addEventListener("deviceorientation",e=>{
-mouseX = e.gamma/30
-mouseY = e.beta/60
-})
-
-const lineMaterial = new THREE.LineBasicMaterial({
-color:0xff00f7,
-transparent:true,
-opacity:0.3
-})
-
-let shockwave = 0
-
-window.addEventListener("click",()=>{
-shockwave = 2
-})
-
 function animate(){
 
 requestAnimationFrame(animate)
 
-const pos = geometry.attributes.position.array
-
-for(let i=0;i<particleCount;i++){
-
-pos[i*3]+=velocities[i*3]
-pos[i*3+1]+=velocities[i*3+1]
-pos[i*3+2]+=velocities[i*3+2]
-
-}
-
-geometry.attributes.position.needsUpdate = true
-
-particles.rotation.y +=0.0005 + mouseX*0.003
-particles.rotation.x +=0.0002 + mouseY*0.003
-
-if(shockwave>0){
-
-particles.scale.set(
-1+shockwave,
-1+shockwave,
-1+shockwave
-)
-
-shockwave*=0.9
-
-}
+particles.rotation.y +=0.0006 + mouseX*0.003
+particles.rotation.x +=0.0003 + mouseY*0.003
 
 renderer.render(scene,camera)
 
