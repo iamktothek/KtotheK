@@ -3,176 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K to the K | N8N</title>
+    <title>K to the K</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap" rel="stylesheet">
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #fff; font-family: sans-serif; }
-        
-        #vignette {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
-            background: radial-gradient(circle, rgba(255,255,255,0) 20%, rgba(0,0,0,0.15) 100%);
-            z-index: 10;
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --accent-color: #ff3e00; /* Subtle Swiss Red accent */
         }
 
-        canvas { display: block; filter: contrast(110%); }
-
-        #n8n-link {
-            position: absolute; left: 50%; top: 72%; transform: translate(-50%, -50%);
-            width: 260px; height: 100px; z-index: 20; cursor: pointer; text-decoration: none; color: transparent;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            cursor: default;
+        }
+
+        h1 {
+            font-weight: 900;
+            font-size: clamp(3rem, 15vw, 10rem);
+            line-height: 0.9;
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* The Interactive Hover */
+        h1:hover {
+            letter-spacing: 0.05em;
+            font-style: italic;
+        }
+
+        .button-wrapper {
+            margin-top: 2rem;
+            opacity: 0;
+            animation: fadeIn 1.5s ease forwards 0.5s;
+        }
+
+        .n8n-link {
+            display: inline-block;
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 400;
+            font-size: 1.2rem;
+            letter-spacing: 0.2rem;
+            padding: 10px 30px;
+            border: 1px solid var(--text-color);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .n8n-link:hover {
+            background-color: var(--text-color);
+            color: var(--bg-color);
+            transform: translateY(-5px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Subtle Swiss Grid Lines (Optional Decor) */
+        .grid-line {
+            position: fixed;
+            background: rgba(0,0,0,0.05);
+            z-index: -1;
+        }
+        .v-line { width: 1px; height: 100%; top: 0; }
+        .h-line { height: 1px; width: 100%; left: 0; }
     </style>
 </head>
 <body>
 
-    <div id="vignette"></div>
-    <a href="https://n8n.ktothek.com" id="n8n-link">N8N</a>
-    <canvas id="canvas"></canvas>
+    <div class="grid-line v-line" style="left: 20%;"></div>
+    <div class="grid-line v-line" style="left: 80%;"></div>
+
+    <div class="container">
+        <h1 id="title">K TO THE K</h1>
+        <div class="button-wrapper">
+            <a href="https://n8n.ktothek.com" class="n8n-link">N8N</a>
+        </div>
+    </div>
 
     <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d', { alpha: false });
-        let particles = [];
-        let fallingObjects = [];
-        let startTime = Date.now();
-        const loadDuration = 2500; // 2.5 seconds to assemble
-        
-        const config = {
-            density: 2.5, 
-            repulsion: 30,
-            friction: 0.9,
-            returnSpeed: 0.12
-        };
-
-        class Particle {
-            constructor(destX, destY) {
-                // 1. Start Scattered randomly across the whole screen
-                this.startX = Math.random() * canvas.width;
-                this.startY = Math.random() * canvas.height;
-                
-                // 2. The Final Destination (with slight organic jitter)
-                this.destX = destX + (Math.random() - 0.5) * 2;
-                this.destY = destY + (Math.random() - 0.5) * 2;
-                
-                // 3. Current position starts at Start
-                this.x = this.startX;
-                this.y = this.startY;
-                
-                this.vx = 0;
-                this.vy = 0;
-                this.size = Math.random() * 2.5 + 0.5;
-                this.color = Math.random() > 0.3 ? '#111' : '#444';
-            }
-
-            update(progress, obstacles) {
-                if (progress < 1) {
-                    // LINEAR MOVE PHASE
-                    // Perfectly straight line from start to finish
-                    this.x = this.startX + (this.destX - this.startX) * progress;
-                    this.y = this.startY + (this.destY - this.startY) * progress;
-                } else {
-                    // PHYSICS PHASE
-                    // Magnetic return force
-                    let dx = this.destX - this.x;
-                    let dy = this.destY - this.y;
-                    
-                    this.vx += dx * config.returnSpeed;
-                    this.vy += dy * config.returnSpeed;
-
-                    // Repulsion from falling objects
-                    obstacles.forEach(obj => {
-                        let ox = obj.x - this.x;
-                        let oy = obj.y - this.y;
-                        let dist = Math.sqrt(ox * ox + oy * oy);
-                        if (dist < obj.radius) {
-                            let angle = Math.atan2(oy, ox);
-                            let force = (obj.radius - dist) / obj.radius;
-                            this.vx -= Math.cos(angle) * force * config.repulsion;
-                            this.vy -= Math.sin(angle) * force * config.repulsion;
-                        }
-                    });
-
-                    this.vx *= config.friction;
-                    this.vy *= config.friction;
-                    this.x += this.vx;
-                    this.y += this.vy;
-                }
-            }
-
-            draw() {
-                ctx.fillStyle = this.color;
-                // Square particles for a grittier, pixel-sand look
-                ctx.fillRect(this.x, this.y, this.size, this.size);
-            }
-        }
-
-        class FallingObject {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = -50;
-                this.vy = Math.random() * 3 + 2;
-                this.radius = Math.random() * 40 + 40;
-            }
-            update() { this.y += this.vy; }
-        }
-
-        function init() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            particles = [];
-            
-            // Sample Text
-            ctx.fillStyle = "black";
-            ctx.textAlign = "center";
-            ctx.font = "bold 130px Inter, Arial, sans-serif";
-            ctx.fillText("K to the K", canvas.width / 2, canvas.height / 2);
-            
-            // Sample Button UI
-            const bW = 240, bH = 85;
-            const bX = canvas.width/2 - bW/2, bY = canvas.height*0.72 - bH/2;
-            ctx.lineWidth = 5;
-            ctx.strokeRect(bX, bY, bW, bH);
-            ctx.font = "bold 50px Inter, Arial, sans-serif";
-            ctx.fillText("N8N", canvas.width / 2, (canvas.height * 0.72) + 18);
-
-            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            for (let y = 0; y < canvas.height; y += config.density) {
-                for (let x = 0; x < canvas.width; x += config.density) {
-                    if (data[(x + y * canvas.width) * 4 + 3] > 128) {
-                        particles.push(new Particle(x, y));
-                    }
-                }
-            }
-        }
-
-        function animate() {
-            ctx.fillStyle = "#fff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            let elapsed = Date.now() - startTime;
-            let progress = Math.min(elapsed / loadDuration, 1);
-
-            // Linear easing out for the move (optional, remove for strictly linear)
-            // let easeProgress = 1 - Math.pow(1 - progress, 3); 
-
-            if (Math.random() < 0.02) fallingObjects.push(new FallingObject());
-
-            fallingObjects.forEach((obj, i) => {
-                obj.update();
-                if (obj.y > canvas.height + 100) fallingObjects.splice(i, 1);
-            });
-
-            particles.forEach(p => {
-                p.update(progress, fallingObjects);
-                p.draw();
-            });
-
-            requestAnimationFrame(animate);
-        }
-
-        init();
-        animate();
-        window.addEventListener('resize', () => { startTime = Date.now(); init(); });
+        // Simple tilt effect for ultra-modern feel
+        const title = document.getElementById('title');
+        document.addEventListener('mousemove', (e) => {
+            const x = (window.innerWidth / 2 - e.pageX) / 25;
+            const y = (window.innerHeight / 2 - e.pageY) / 25;
+            title.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
+        });
     </script>
 </body>
 </html>
