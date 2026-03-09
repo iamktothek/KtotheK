@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K to the K | N8N</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #fff; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #fff; font-family: sans-serif; }
         
         #vignette {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
-            background: radial-gradient(circle, rgba(255,255,255,0) 30%, rgba(0,0,0,0.18) 100%);
+            background: radial-gradient(circle, rgba(255,255,255,0) 20%, rgba(0,0,0,0.15) 100%);
             z-index: 10;
         }
 
-        canvas { display: block; filter: contrast(120%); } /* Slight contrast boost for grit */
+        canvas { display: block; filter: contrast(110%); }
 
         #n8n-link {
             position: absolute; left: 50%; top: 72%; transform: translate(-50%, -50%);
-            width: 240px; height: 90px; z-index: 20; cursor: pointer; text-decoration: none; color: transparent;
+            width: 260px; height: 100px; z-index: 20; cursor: pointer; text-decoration: none; color: transparent;
         }
     </style>
 </head>
@@ -32,78 +32,84 @@
         const ctx = canvas.getContext('2d', { alpha: false });
         let particles = [];
         let fallingObjects = [];
-        let frame = 0;
+        let startTime = Date.now();
+        const loadDuration = 2500; // 2.5 seconds to assemble
         
         const config = {
-            density: 2.5, // Lower is denser
-            repulsion: 35,
-            chaosDuration: 100, // Frames of initial madness
+            density: 2.5, 
+            repulsion: 30,
+            friction: 0.9,
+            returnSpeed: 0.12
         };
 
         class Particle {
-            constructor(x, y) {
-                // Initial Explosion State
-                this.x = canvas.width / 2;
-                this.y = canvas.height / 2;
+            constructor(destX, destY) {
+                // 1. Start Scattered randomly across the whole screen
+                this.startX = Math.random() * canvas.width;
+                this.startY = Math.random() * canvas.height;
                 
-                // Destination with "Organic Jitter" (breaks the grid look)
-                this.destX = x + (Math.random() - 0.5) * 3;
-                this.destY = y + (Math.random() - 0.5) * 3;
+                // 2. The Final Destination (with slight organic jitter)
+                this.destX = destX + (Math.random() - 0.5) * 2;
+                this.destY = destY + (Math.random() - 0.5) * 2;
                 
-                // Random Physical Personality
-                this.vx = (Math.random() - 0.5) * 50; // High initial burst
-                this.vy = (Math.random() - 0.5) * 50;
-                this.friction = Math.random() * 0.05 + 0.88;
-                this.ease = Math.random() * 0.1 + 0.02;
-                this.size = Math.random() * 2.8 + 0.4; // Highly varied sizes
-                this.color = Math.random() > 0.5 ? '#111' : '#333';
+                // 3. Current position starts at Start
+                this.x = this.startX;
+                this.y = this.startY;
+                
+                this.vx = 0;
+                this.vy = 0;
+                this.size = Math.random() * 2.5 + 0.5;
+                this.color = Math.random() > 0.3 ? '#111' : '#444';
             }
 
-            update(obstacles, isChaos) {
-                // 1. Magnetic Return Force
-                let dx = this.destX - this.x;
-                let dy = this.destY - this.y;
-                
-                // Add "Turbulence" during chaos phase
-                if (isChaos) {
-                    this.vx += (Math.random() - 0.5) * 2;
-                    this.vy += (Math.random() - 0.5) * 2;
+            update(progress, obstacles) {
+                if (progress < 1) {
+                    // LINEAR MOVE PHASE
+                    // Perfectly straight line from start to finish
+                    this.x = this.startX + (this.destX - this.startX) * progress;
+                    this.y = this.startY + (this.destY - this.startY) * progress;
+                } else {
+                    // PHYSICS PHASE
+                    // Magnetic return force
+                    let dx = this.destX - this.x;
+                    let dy = this.destY - this.y;
+                    
+                    this.vx += dx * config.returnSpeed;
+                    this.vy += dy * config.returnSpeed;
+
+                    // Repulsion from falling objects
+                    obstacles.forEach(obj => {
+                        let ox = obj.x - this.x;
+                        let oy = obj.y - this.y;
+                        let dist = Math.sqrt(ox * ox + oy * oy);
+                        if (dist < obj.radius) {
+                            let angle = Math.atan2(oy, ox);
+                            let force = (obj.radius - dist) / obj.radius;
+                            this.vx -= Math.cos(angle) * force * config.repulsion;
+                            this.vy -= Math.sin(angle) * force * config.repulsion;
+                        }
+                    });
+
+                    this.vx *= config.friction;
+                    this.vy *= config.friction;
+                    this.x += this.vx;
+                    this.y += this.vy;
                 }
-
-                this.vx += dx * this.ease;
-                this.vy += dy * this.ease;
-
-                // 2. Obstacle Propulsion
-                obstacles.forEach(obj => {
-                    let ox = obj.x - this.x;
-                    let oy = obj.y - this.y;
-                    let dist = Math.sqrt(ox * ox + oy * oy);
-                    if (dist < obj.radius) {
-                        let angle = Math.atan2(oy, ox);
-                        let force = (obj.radius - dist) / obj.radius;
-                        this.vx -= Math.cos(angle) * force * config.repulsion;
-                        this.vy -= Math.sin(angle) * force * config.repulsion;
-                    }
-                });
-
-                this.vx *= this.friction;
-                this.vy *= this.friction;
-                this.x += this.vx;
-                this.y += this.vy;
             }
 
             draw() {
                 ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.size, this.size); // Squares look grittier than arcs
+                // Square particles for a grittier, pixel-sand look
+                ctx.fillRect(this.x, this.y, this.size, this.size);
             }
         }
 
         class FallingObject {
             constructor() {
                 this.x = Math.random() * canvas.width;
-                this.y = -100;
-                this.vy = Math.random() * 4 + 2;
-                this.radius = Math.random() * 50 + 40;
+                this.y = -50;
+                this.vy = Math.random() * 3 + 2;
+                this.radius = Math.random() * 40 + 40;
             }
             update() { this.y += this.vy; }
         }
@@ -112,22 +118,19 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             particles = [];
-            ctx.fillStyle = "white";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Setup Text & Button sampling
+            
+            // Sample Text
             ctx.fillStyle = "black";
             ctx.textAlign = "center";
-            
-            // "K to the K"
-            ctx.font = "bold 140px Inter, system-ui, sans-serif";
+            ctx.font = "bold 130px Inter, Arial, sans-serif";
             ctx.fillText("K to the K", canvas.width / 2, canvas.height / 2);
             
-            // "N8N" Button - More robust frame
-            const bW = 240, bH = 80, bX = canvas.width/2 - bW/2, bY = canvas.height*0.72 - bH/2;
-            ctx.lineWidth = 6;
+            // Sample Button UI
+            const bW = 240, bH = 85;
+            const bX = canvas.width/2 - bW/2, bY = canvas.height*0.72 - bH/2;
+            ctx.lineWidth = 5;
             ctx.strokeRect(bX, bY, bW, bH);
-            ctx.font = "bold 50px Inter, system-ui, sans-serif";
+            ctx.font = "bold 50px Inter, Arial, sans-serif";
             ctx.fillText("N8N", canvas.width / 2, (canvas.height * 0.72) + 18);
 
             const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
@@ -143,25 +146,24 @@
         }
 
         function animate() {
-            // White background fill for each frame
-            ctx.fillStyle = "white";
+            ctx.fillStyle = "#fff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            frame++;
-            const isChaos = frame < config.chaosDuration;
+            let elapsed = Date.now() - startTime;
+            let progress = Math.min(elapsed / loadDuration, 1);
+
+            // Linear easing out for the move (optional, remove for strictly linear)
+            // let easeProgress = 1 - Math.pow(1 - progress, 3); 
 
             if (Math.random() < 0.02) fallingObjects.push(new FallingObject());
 
             fallingObjects.forEach((obj, i) => {
                 obj.update();
-                // Draw falling shadow objects (faint)
-                ctx.fillStyle = 'rgba(0,0,0,0.03)';
-                ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI*2); ctx.fill();
                 if (obj.y > canvas.height + 100) fallingObjects.splice(i, 1);
             });
 
             particles.forEach(p => {
-                p.update(fallingObjects, isChaos);
+                p.update(progress, fallingObjects);
                 p.draw();
             });
 
@@ -170,7 +172,7 @@
 
         init();
         animate();
-        window.addEventListener('resize', init);
+        window.addEventListener('resize', () => { startTime = Date.now(); init(); });
     </script>
 </body>
 </html>
