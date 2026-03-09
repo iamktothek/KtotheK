@@ -3,71 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K to the K</title>
+    <title>K to the K | Magnetic Flow</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@900&display=swap');
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #fff; }
         
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #ffffff;
-            overflow: hidden;
-            font-family: 'Inter', sans-serif;
-        }
-
-        #canvas-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-
-        .ui-layer {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        /* The Vignette Effect */
+        #vignette {
+            position: fixed;
+            inset: 0;
             pointer-events: none;
+            z-index: 5;
+            background: radial-gradient(circle, rgba(255,255,255,0) 50%, rgba(0,0,0,0.05) 100%);
         }
 
-        .n8n-button {
-            margin-top: 350px; 
-            pointer-events: auto;
-            padding: 20px 50px;
-            background: #000;
-            color: #fff;
-            text-decoration: none;
-            letter-spacing: 0.5em;
-            font-weight: 900;
-            font-size: 12px;
-            text-transform: uppercase;
-            border-radius: 100px;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-
-        .n8n-button:hover {
-            transform: scale(1.1) translateY(-5px);
-            background: #111;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.15);
-        }
+        #canvas-container { position: fixed; inset: 0; z-index: 1; }
+        
+        /* Hidden link for SEO/Accessibility since the button is rendered in 3D */
+        .hidden-link { position: absolute; opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body>
 
+    <div id="vignette"></div>
     <div id="canvas-container"></div>
-
-    <div class="ui-layer">
-        <a href="https://n8n.ktothek.com" class="n8n-button">N8N</a>
-    </div>
+    <a href="https://n8n.ktothek.com" class="hidden-link">n8n</a>
 
     <script type="importmap">
         {
@@ -83,71 +42,31 @@
         import { FontLoader } from 'three/addons/loaders/FontLoader.js';
         import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
-        let scene, camera, renderer, textGroup;
+        let scene, camera, renderer, particles;
+        const particleData = [];
+        const fallingObjects = [];
+        const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
         init();
 
-        function init() {
+        async function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xffffff);
 
-            camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 80;
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 60;
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setPixelRatio(window.devicePixelRatio);
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // Chrome MatCap Texture
-            const loader = new THREE.TextureLoader();
-            // A brighter, more "aluminum" matcap
-            const chromeTexture = loader.load('https://raw.githubusercontent.com/nidorx/matcaps/master/1024/7877EE_D87FC5_75D9C7_1C128C-1024px.png');
-            // Adding a second option for pure silver chrome if the one above is too colorful:
-            const silverTexture = loader.load('https://raw.githubusercontent.com/nidorx/matcaps/master/1024/B7B7B7_EFEFEF_343434_5C5C5C-1024px.png');
-
-            const fontLoader = new FontLoader();
-            fontLoader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', (font) => {
-                
-                textGroup = new THREE.Group();
-                const str = "K to the K";
-                const letterSpacing = 8.5; // Massive spacing
-                const totalWidth = (str.length - 1) * letterSpacing;
-
-                const material = new THREE.MeshMatcapMaterial({
-                    matcap: silverTexture,
-                    color: 0xffffff
-                });
-
-                str.split('').forEach((char, i) => {
-                    if (char === ' ') return;
-
-                    const geometry = new TextGeometry(char, {
-                        font: font,
-                        size: 6,
-                        height: 1,
-                        curveSegments: 24, // Smoother holes
-                        bevelEnabled: true,
-                        bevelThickness: 1.5,
-                        bevelSize: 0.8,
-                        bevelOffset: 0,
-                        bevelSegments: 12
-                    });
-                    geometry.center();
-
-                    const mesh = new THREE.Mesh(geometry, material);
-                    
-                    // X-Position with wide spacing
-                    mesh.position.x = (i * letterSpacing) - (totalWidth / 2) + 2; 
-                    
-                    // Random slight rotation for "floating balloon" feel
-                    mesh.rotation.z = (Math.random() - 0.5) * 0.2;
-                    
-                    textGroup.add(mesh);
-                });
-
-                scene.add(textGroup);
+            const loader = new FontLoader();
+            loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', (font) => {
+                createParticleText(font, "K to the K", 0, 5);
+                createParticleText(font, "N8N", -15, 3, true); // The button
+                setupFallingObjects();
                 animate();
             });
 
@@ -156,32 +75,114 @@
                 mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             });
 
-            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('click', (e) => {
+                // Check if clicking near the N8N text area
+                if (Math.abs(mouse.x) < 0.2 && mouse.y < -0.15 && mouse.y > -0.35) {
+                    window.location.href = "https://n8n.ktothek.com";
+                }
+            });
         }
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        function createParticleText(font, text, yOffset, size, isButton = false) {
+            const geo = new TextGeometry(text, { font, size, height: 0, curveSegments: 4 });
+            geo.center();
+            
+            // Sample points from the geometry
+            const posAttr = geo.getAttribute('position');
+            const step = isButton ? 2 : 1; // density
+            
+            for (let i = 0; i < posAttr.count; i += step) {
+                const x = posAttr.getX(i);
+                const y = posAttr.getY(i) + yOffset;
+                const z = posAttr.getZ(i);
+
+                particleData.push({
+                    home: new THREE.Vector3(x, y, z),
+                    curr: new THREE.Vector3(x, y, z),
+                    vel: new THREE.Vector3(),
+                    color: isButton ? new THREE.Color(0x333333) : new THREE.Color(0x000000)
+                });
+            }
+
+            const pointsGeo = new THREE.BufferGeometry();
+            updateGeometry(pointsGeo);
+
+            const mat = new THREE.PointsMaterial({ size: 0.15, vertexColors: true });
+            particles = new THREE.Points(pointsGeo, mat);
+            scene.add(particles);
+        }
+
+        function setupFallingObjects() {
+            const geometries = [
+                new THREE.IcosahedronGeometry(2),
+                new THREE.BoxGeometry(2, 2, 2),
+                new THREE.TorusGeometry(1.5, 0.5, 8, 16)
+            ];
+            
+            for (let i = 0; i < 5; i++) {
+                const mesh = new THREE.Mesh(
+                    geometries[Math.floor(Math.random() * geometries.length)],
+                    new THREE.MeshBasicMaterial({ color: 0xeeeeee, wireframe: true })
+                );
+                resetObject(mesh);
+                scene.add(mesh);
+                fallingObjects.push(mesh);
+            }
+        }
+
+        function resetObject(obj) {
+            obj.position.y = 40 + Math.random() * 40;
+            obj.position.x = (Math.random() - 0.5) * 60;
+            obj.position.z = (Math.random() - 0.5) * 10;
+            obj.userData.speed = 0.2 + Math.random() * 0.3;
+        }
+
+        function updateGeometry(geo) {
+            const positions = new Float32Array(particleData.length * 3);
+            const colors = new Float32Array(particleData.length * 3);
+            particleData.forEach((p, i) => {
+                positions[i * 3] = p.curr.x;
+                positions[i * 3 + 1] = p.curr.y;
+                positions[i * 3 + 2] = p.curr.z;
+                colors[i * 3] = p.color.r;
+                colors[i * 3 + 1] = p.color.g;
+                colors[i * 3 + 2] = p.color.b;
+            });
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            const time = Date.now() * 0.001;
+            
+            fallingObjects.forEach(obj => {
+                obj.position.y -= obj.userData.speed;
+                obj.rotation.x += 0.01;
+                obj.rotation.z += 0.01;
+                if (obj.position.y < -40) resetObject(obj);
 
-            if (textGroup) {
-                // Tilt group based on mouse
-                textGroup.rotation.y += (mouse.x * 0.3 - textGroup.rotation.y) * 0.05;
-                textGroup.rotation.x += (-mouse.y * 0.2 - textGroup.rotation.x) * 0.05;
-
-                // Individual letter float physics
-                textGroup.children.forEach((child, i) => {
-                    child.position.y = Math.sin(time + i * 0.4) * 1.8;
-                    // Gentle swaying
-                    child.rotation.y = Math.sin(time * 0.5 + i) * 0.1;
+                // Particle Interaction Logic
+                particleData.forEach(p => {
+                    const dist = p.curr.distanceTo(obj.position);
+                    if (dist < 6) {
+                        const dir = new THREE.Vector3().subVectors(p.curr, obj.position).normalize();
+                        const force = (6 - dist) * 0.5;
+                        p.vel.add(dir.multiplyScalar(force));
+                    }
                 });
-            }
+            });
 
+            // Physics Update
+            particleData.forEach(p => {
+                // Spring back to home
+                const spring = new THREE.Vector3().subVectors(p.home, p.curr).multiplyScalar(0.05);
+                p.vel.add(spring);
+                p.vel.multiplyScalar(0.9); // Dampening
+                p.curr.add(p.vel);
+            });
+
+            if (particles) updateGeometry(particles.geometry);
+            
             renderer.render(scene, camera);
         }
     </script>
