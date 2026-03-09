@@ -33,7 +33,7 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHei
 camera.position.z = 25;
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(window.innerWidth,window.innerHeight);
 renderer.setClearColor(0x050510);
 document.body.appendChild(renderer.domElement);
 
@@ -94,11 +94,6 @@ for(let i=0;i<particleCount;i++){
   targets[i*3+1]=(150-y)/25;
   targets[i*3+2]=0;
 }
-
-// --- Cyberpunk grid ---
-const grid = new THREE.GridHelper(200,80,0xff00f7,0x00eaff);
-grid.position.y=-12;
-scene.add(grid);
 
 // --- Pointer & interaction ---
 let mouseX=0,mouseY=0;
