@@ -13,9 +13,10 @@
             --text-color: #000000;
             --glitch-cyan: #00f2ff;
             --glitch-magenta: #ff00c1;
-            --scanline-color: rgba(0, 0, 0, 0.1);
+            --scanline-color: rgba(0, 0, 0, 0.12);
         }
 
+        /* --- SLOW LOADING ANIMATION --- */
         #loader {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -24,13 +25,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: transform 0.8s cubic-bezier(0.85, 0, 0.15, 1);
+            /* Slower transition for the shutter reveal */
+            transition: transform 1.2s cubic-bezier(0.85, 0, 0.15, 1);
         }
 
         .loader-line {
             width: 0%; height: 2px;
             background: var(--text-color);
-            animation: loadProgress 1.2s ease-in-out forwards;
+            /* Slower progress bar: 3 seconds */
+            animation: loadProgress 3s ease-in-out forwards;
         }
 
         @keyframes loadProgress {
@@ -53,17 +56,16 @@
             overflow: hidden;
             position: relative;
             opacity: 0;
-            transition: opacity 0.5s ease;
+            transition: opacity 1s ease; /* Slower fade-in */
         }
 
         body.loaded { opacity: 1; }
 
-        /* --- THE DYNAMIC SCANLINE --- */
         #scanline {
             position: absolute;
-            top: -10px; left: 0; width: 100%; height: 4px;
+            top: -10px; left: 0; width: 100%; height: 6px;
             background: var(--scanline-color);
-            z-index: 10;
+            z-index: 20;
             pointer-events: none;
         }
 
@@ -91,43 +93,47 @@
             line-height: 0.8;
         }
 
-        /* --- GLITCH STATES --- */
+        /* --- FIXED CYAN/MAGENTA GLITCH LOGIC --- */
+        /* These are the colored "ghost" layers */
         .char::before, .char::after {
             content: attr(data-char);
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-color);
-            display: none;
+            visibility: hidden; /* Using visibility instead of display:none for smoother transition */
+            background: transparent;
         }
 
-        /* Active class triggered by JS Scanline or CSS Hover */
+        /* The Cyan Layer */
         .char.active::before, .char:hover::before {
-            display: block;
-            left: 5px;
-            text-shadow: -3px 0 var(--glitch-cyan);
-            animation: glitch-anim 0.2s infinite linear;
+            visibility: visible;
+            left: 4px;
+            color: var(--glitch-cyan);
             z-index: -1;
+            animation: glitch-anim 0.2s infinite linear alternate-reverse;
+            opacity: 0.7;
         }
 
+        /* The Magenta Layer */
         .char.active::after, .char:hover::after {
-            display: block;
-            left: -5px;
-            text-shadow: 3px 0 var(--glitch-magenta);
-            animation: glitch-anim-2 0.2s infinite linear;
+            visibility: visible;
+            left: -4px;
+            color: var(--glitch-magenta);
             z-index: -2;
+            animation: glitch-anim-2 0.3s infinite linear alternate;
+            opacity: 0.7;
         }
 
         @keyframes glitch-anim {
-            0% { clip-path: inset(10% 0 60% 0); }
-            100% { clip-path: inset(40% 0 20% 0); }
+            0% { clip-path: inset(10% 0 60% 0); transform: translate(-2px, 2px); }
+            100% { clip-path: inset(40% 0 20% 0); transform: translate(2px, -2px); }
         }
 
         @keyframes glitch-anim-2 {
-            0% { clip-path: inset(30% 0 30% 0); }
-            100% { clip-path: inset(10% 0 70% 0); }
+            0% { clip-path: inset(30% 0 30% 0); transform: translate(2px, 2px); }
+            100% { clip-path: inset(10% 0 70% 0); transform: translate(-2px, -2px); }
         }
 
-        /* --- BUTTON --- */
+        /* --- THE BUTTON --- */
         .button-wrapper { margin-top: 5rem; }
 
         .n8n-link {
@@ -167,7 +173,10 @@
 </head>
 <body>
 
-    <div id="loader"><div class="loader-line"></div></div>
+    <div id="loader">
+        <div class="loader-line"></div>
+    </div>
+
     <div id="scanline"></div>
     <div class="bg-grid"></div>
 
@@ -181,7 +190,6 @@
     <script>
         const text = "K TO THE K";
         const container = document.getElementById('glitch-container');
-        const scanline = document.getElementById('scanline');
         const chars = [];
 
         // Build characters
@@ -195,20 +203,19 @@
             chars.push(span);
         });
 
-        // Scanline movement and collision logic
-        let scanPos = -50;
-        const speed = 4; // Pixels per frame
+        // Scanline movement
+        let scanPos = -100;
+        const speed = 3; // Slower scanline speed for better visibility
 
         function animateScan() {
             scanPos += speed;
-            if (scanPos > window.innerHeight + 50) scanPos = -50;
+            if (scanPos > window.innerHeight + 100) scanPos = -100;
             
+            const scanline = document.getElementById('scanline');
             scanline.style.top = scanPos + 'px';
 
-            // Check collision with each character
             chars.forEach(char => {
                 const rect = char.getBoundingClientRect();
-                // If scanline is within the character's vertical space
                 if (scanPos > rect.top && scanPos < rect.bottom) {
                     char.classList.add('active');
                 } else {
@@ -221,8 +228,11 @@
 
         animateScan();
 
+        // Reveal page after the 3s loader animation finishes
         window.addEventListener('load', () => {
-            setTimeout(() => document.body.classList.add('loaded'), 1200);
+            setTimeout(() => {
+                document.body.classList.add('loaded');
+            }, 3200); 
         });
     </script>
 </body>
