@@ -5,104 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K to the K | N8N</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #ffffff;
-        }
-
-        /* Deep Vignette */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #fff; }
+        
         #vignette {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            background: radial-gradient(circle, rgba(255,255,255,0) 40%, rgba(0,0,0,0.15) 100%);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+            background: radial-gradient(circle, rgba(255,255,255,0) 30%, rgba(0,0,0,0.18) 100%);
             z-index: 10;
         }
 
-        canvas {
-            display: block;
-        }
+        canvas { display: block; filter: contrast(120%); } /* Slight contrast boost for grit */
 
-        /* Clickable Area for N8N */
         #n8n-link {
-            position: absolute;
-            left: 50%;
-            top: 70%;
-            transform: translate(-50%, -50%);
-            width: 220px;
-            height: 80px;
-            z-index: 20;
-            cursor: pointer;
-            text-decoration: none;
-            color: transparent;
+            position: absolute; left: 50%; top: 72%; transform: translate(-50%, -50%);
+            width: 240px; height: 90px; z-index: 20; cursor: pointer; text-decoration: none; color: transparent;
         }
     </style>
 </head>
 <body>
 
     <div id="vignette"></div>
-    <a href="https://n8n.ktothek.com" id="n8n-link" aria-label="Go to N8N">N8N</a>
+    <a href="https://n8n.ktothek.com" id="n8n-link">N8N</a>
     <canvas id="canvas"></canvas>
 
     <script>
         const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const ctx = canvas.getContext('2d', { alpha: false });
         let particles = [];
         let fallingObjects = [];
-        let animationStarted = false;
+        let frame = 0;
         
         const config = {
-            particleSpacing: 3, // Lower = higher density
-            mouseRadius: 120,
-            repulsionStrength: 25,
-            returnSpeed: 0.08,
-            friction: 0.92,
-            objectFrequency: 0.015
+            density: 2.5, // Lower is denser
+            repulsion: 35,
+            chaosDuration: 100, // Frames of initial madness
         };
-
-        window.addEventListener('resize', () => {
-            init();
-        });
 
         class Particle {
             constructor(x, y) {
-                // Start particles at random screen positions for the "loading" effect
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.destX = x;
-                this.destY = y;
-                this.vx = (Math.random() - 0.5) * 10;
-                this.vy = (Math.random() - 0.5) * 10;
-                // Randomized size for organic feel
-                this.size = Math.random() * 2.2 + 0.5;
-                this.opacity = 0;
+                // Initial Explosion State
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                
+                // Destination with "Organic Jitter" (breaks the grid look)
+                this.destX = x + (Math.random() - 0.5) * 3;
+                this.destY = y + (Math.random() - 0.5) * 3;
+                
+                // Random Physical Personality
+                this.vx = (Math.random() - 0.5) * 50; // High initial burst
+                this.vy = (Math.random() - 0.5) * 50;
+                this.friction = Math.random() * 0.05 + 0.88;
+                this.ease = Math.random() * 0.1 + 0.02;
+                this.size = Math.random() * 2.8 + 0.4; // Highly varied sizes
+                this.color = Math.random() > 0.5 ? '#111' : '#333';
             }
 
-            draw() {
-                ctx.fillStyle = `rgba(34, 34, 34, ${this.opacity})`;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            update(obstacles) {
-                // Fade in during assembly
-                if (this.opacity < 1) this.opacity += 0.01;
-
-                // Return to home force (Magnetic)
+            update(obstacles, isChaos) {
+                // 1. Magnetic Return Force
                 let dx = this.destX - this.x;
                 let dy = this.destY - this.y;
-                this.vx += dx * config.returnSpeed;
-                this.vy += dy * config.returnSpeed;
+                
+                // Add "Turbulence" during chaos phase
+                if (isChaos) {
+                    this.vx += (Math.random() - 0.5) * 2;
+                    this.vy += (Math.random() - 0.5) * 2;
+                }
 
-                // Obstacle repulsion (Magnetic Propulsion)
+                this.vx += dx * this.ease;
+                this.vy += dy * this.ease;
+
+                // 2. Obstacle Propulsion
                 obstacles.forEach(obj => {
                     let ox = obj.x - this.x;
                     let oy = obj.y - this.y;
@@ -110,15 +81,20 @@
                     if (dist < obj.radius) {
                         let angle = Math.atan2(oy, ox);
                         let force = (obj.radius - dist) / obj.radius;
-                        this.vx -= Math.cos(angle) * force * config.repulsionStrength;
-                        this.vy -= Math.sin(angle) * force * config.repulsionStrength;
+                        this.vx -= Math.cos(angle) * force * config.repulsion;
+                        this.vy -= Math.sin(angle) * force * config.repulsion;
                     }
                 });
 
-                this.vx *= config.friction;
-                this.vy *= config.friction;
+                this.vx *= this.friction;
+                this.vy *= this.friction;
                 this.x += this.vx;
                 this.y += this.vy;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.size, this.size); // Squares look grittier than arcs
             }
         }
 
@@ -126,55 +102,40 @@
             constructor() {
                 this.x = Math.random() * canvas.width;
                 this.y = -100;
-                this.vy = Math.random() * 3 + 1.5;
-                this.radius = Math.random() * 40 + 30;
-                this.color = `rgba(0,0,0,${Math.random() * 0.05 + 0.02})`;
+                this.vy = Math.random() * 4 + 2;
+                this.radius = Math.random() * 50 + 40;
             }
-
-            update() {
-                this.y += this.vy;
-            }
-
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            update() { this.y += this.vy; }
         }
 
         function init() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             particles = [];
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 1. Draw "K to the K" - LARGER
+            // Setup Text & Button sampling
             ctx.fillStyle = "black";
-            ctx.font = "bold 120px 'Segoe UI', Roboto, Arial";
             ctx.textAlign = "center";
+            
+            // "K to the K"
+            ctx.font = "bold 140px Inter, system-ui, sans-serif";
             ctx.fillText("K to the K", canvas.width / 2, canvas.height / 2);
             
-            // 2. Draw the Button Border (Rectangular)
-            const btnW = 200;
-            const btnH = 70;
-            const btnX = canvas.width / 2 - btnW / 2;
-            const btnY = canvas.height * 0.7 - btnH / 2;
-            
-            ctx.lineWidth = 4;
-            ctx.strokeRect(btnX, btnY, btnW, btnH);
+            // "N8N" Button - More robust frame
+            const bW = 240, bH = 80, bX = canvas.width/2 - bW/2, bY = canvas.height*0.72 - bH/2;
+            ctx.lineWidth = 6;
+            ctx.strokeRect(bX, bY, bW, bH);
+            ctx.font = "bold 50px Inter, system-ui, sans-serif";
+            ctx.fillText("N8N", canvas.width / 2, (canvas.height * 0.72) + 18);
 
-            // 3. Draw "N8N" Text inside button
-            ctx.font = "bold 45px 'Segoe UI', Roboto, Arial";
-            ctx.fillText("N8N", canvas.width / 2, (canvas.height * 0.7) + 15);
-
-            // Sample the pixels
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            for (let y = 0; y < canvas.height; y += config.particleSpacing) {
-                for (let x = 0; x < canvas.width; x += config.particleSpacing) {
-                    const index = (x + y * canvas.width) * 4;
-                    if (imageData[index + 3] > 128) {
+            for (let y = 0; y < canvas.height; y += config.density) {
+                for (let x = 0; x < canvas.width; x += config.density) {
+                    if (data[(x + y * canvas.width) * 4 + 3] > 128) {
                         particles.push(new Particle(x, y));
                     }
                 }
@@ -182,21 +143,25 @@
         }
 
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // White background fill for each frame
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            frame++;
+            const isChaos = frame < config.chaosDuration;
 
-            // Generate falling objects
-            if (Math.random() < config.objectFrequency) {
-                fallingObjects.push(new FallingObject());
-            }
+            if (Math.random() < 0.02) fallingObjects.push(new FallingObject());
 
             fallingObjects.forEach((obj, i) => {
                 obj.update();
-                obj.draw();
+                // Draw falling shadow objects (faint)
+                ctx.fillStyle = 'rgba(0,0,0,0.03)';
+                ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI*2); ctx.fill();
                 if (obj.y > canvas.height + 100) fallingObjects.splice(i, 1);
             });
 
             particles.forEach(p => {
-                p.update(fallingObjects);
+                p.update(fallingObjects, isChaos);
                 p.draw();
             });
 
@@ -205,6 +170,7 @@
 
         init();
         animate();
+        window.addEventListener('resize', init);
     </script>
 </body>
 </html>
