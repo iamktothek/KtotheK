@@ -13,26 +13,53 @@
             --text-color: #000000;
             --glitch-cyan: #00f2ff;
             --glitch-magenta: #ff00c1;
-            --scanline-color: rgba(0, 0, 0, 0.18);
+            --scanline-color: rgba(0, 0, 0, 0.15);
         }
 
-        /* --- PRELOADER (3s) --- */
+        /* --- CRT / VHS POWER ON LOADER --- */
         #loader {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-color);
+            background: #000;
             z-index: 100;
             display: flex;
             align-items: center; justify-content: center;
-            transition: transform 1.2s cubic-bezier(0.85, 0, 0.15, 1);
         }
-        .loader-line {
-            width: 0%; height: 2px;
-            background: var(--text-color);
-            animation: loadProgress 3s ease-in-out forwards;
+
+        /* The "Light Beam" of a CRT powering on */
+        .loader-beam {
+            width: 100%; height: 2px;
+            background: #fff;
+            box-shadow: 0 0 10px #fff;
+            transform: scaleX(0);
+            animation: beamPowerOn 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
         }
-        @keyframes loadProgress { 0% { width: 0%; } 100% { width: 100%; } }
-        .loaded #loader { transform: translateY(-100%); }
+
+        @keyframes beamPowerOn {
+            0% { transform: scaleX(0); height: 2px; }
+            100% { transform: scaleX(1); height: 2px; }
+        }
+
+        /* When loaded, the beam expands vertically to reveal the page */
+        .loaded #loader {
+            animation: shutterOpen 1.5s cubic-bezier(0.85, 0, 0.15, 1) forwards;
+        }
+
+        @keyframes shutterOpen {
+            0% { height: 2px; top: 50%; }
+            100% { height: 100%; top: 0%; opacity: 0; visibility: hidden; }
+        }
+
+        /* --- GLOBAL VHS DISTORTION --- */
+        body::after {
+            content: " ";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_Noise_Generated.png');
+            opacity: 0.04; /* Very subtle grain */
+            z-index: 50;
+            pointer-events: none;
+        }
 
         * { margin: 0; padding: 0; box-sizing: border-box; cursor: default; }
 
@@ -43,16 +70,14 @@
             height: 100vh;
             display: flex; align-items: center; justify-content: center;
             overflow: hidden; position: relative;
-            opacity: 0; transition: opacity 1s ease;
         }
-        body.loaded { opacity: 1; }
 
-        /* --- SCANLINE --- */
         #scanline {
             position: absolute;
-            top: -10px; left: 0; width: 100%; height: 12px;
+            top: -10px; left: 0; width: 100%; height: 15px;
             background: var(--scanline-color);
             z-index: 20; pointer-events: none;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
         }
 
         .container { text-align: center; z-index: 5; }
@@ -67,7 +92,7 @@
         .char { position: relative; display: inline-block; font-size: clamp(3rem, 10vw, 8rem); }
         .char.big-k { font-size: clamp(6rem, 20vw, 16rem); line-height: 0.8; }
 
-        /* --- HIGH-SPEED GLITCH ANIMATIONS --- */
+        /* --- HIGH SPEED GLITCH --- */
         .char::before, .char::after {
             content: attr(data-char);
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -75,51 +100,43 @@
         }
 
         .char.active::before, .char:hover::before {
-            visibility: visible; left: 6px;
+            visibility: visible; left: 8px;
             color: var(--glitch-cyan); z-index: -1;
-            /* High Speed: 0.08s */
-            animation: glitch-anim 0.08s infinite linear alternate-reverse;
+            animation: glitch-anim 0.06s infinite linear alternate-reverse;
             animation-delay: var(--g-delay);
         }
 
         .char.active::after, .char:hover::after {
-            visibility: visible; left: -6px;
+            visibility: visible; left: -8px;
             color: var(--glitch-magenta); z-index: -2;
-            /* High Speed: 0.05s */
-            animation: glitch-anim-2 0.05s infinite linear alternate;
+            animation: glitch-anim-2 0.04s infinite linear alternate;
             animation-delay: calc(var(--g-delay) * 0.5);
         }
 
         @keyframes glitch-anim {
-            0% { clip-path: inset(10% 0 60% 0); transform: translate(-4px, 2px); }
-            50% { clip-path: inset(30% 0 20% 0); transform: translate(4px, -1px); }
-            100% { clip-path: inset(50% 0 10% 0); transform: translate(-2px, 3px); }
+            0% { clip-path: inset(5% 0 70% 0); transform: translate(-5px, 2px); }
+            100% { clip-path: inset(40% 0 10% 0); transform: translate(5px, -2px); }
         }
 
         @keyframes glitch-anim-2 {
-            0% { clip-path: inset(40% 0 30% 0); transform: translate(4px, 1px); }
-            50% { clip-path: inset(10% 0 70% 0); transform: translate(-3px, -2px); }
-            100% { clip-path: inset(60% 0 5% 0); transform: translate(2px, 2px); }
+            0% { clip-path: inset(50% 0 20% 0); transform: translate(5px, 1px); }
+            100% { clip-path: inset(10% 0 60% 0); transform: translate(-5px, -1px); }
         }
 
-        /* --- BUTTON WRAPPER GLITCH --- */
+        /* --- BUTTON WRAPPER --- */
         .button-wrapper { 
-            margin-top: 5rem; position: relative; 
-            display: inline-block;
+            margin-top: 5rem; position: relative; display: inline-block;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .n8n-link {
             display: inline-block; text-decoration: none;
             color: var(--text-color); font-weight: 900;
             font-size: 0.85rem; letter-spacing: 0.4em;
-            padding: 16px 50px; border: 2px solid var(--text-color);
+            padding: 18px 55px; border: 2px solid var(--text-color);
             background: var(--bg-color); cursor: pointer;
             position: relative; z-index: 10;
         }
-        .button-wrapper:hover {
-            transform: scale(1.15); letter-spacing: 0.6em;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-        }
+        .button-wrapper:hover { transform: scale(1.1); letter-spacing: 0.5em; }
         .button-wrapper:hover .n8n-link { background: var(--text-color); color: var(--bg-color); }
         
         .btn-glitch-cyan, .btn-glitch-magenta {
@@ -130,17 +147,15 @@
             visibility: hidden; pointer-events: none; z-index: -1;
         }
 
-        /* High-speed Button Glitch */
         .button-wrapper.active .btn-glitch-cyan {
             visibility: visible; color: var(--glitch-cyan); border-color: var(--glitch-cyan);
-            left: 8px; animation: glitch-anim 0.07s infinite linear alternate-reverse;
+            left: 10px; animation: glitch-anim 0.05s infinite linear alternate-reverse;
         }
         .button-wrapper.active .btn-glitch-magenta {
             visibility: visible; color: var(--glitch-magenta); border-color: var(--glitch-magenta);
-            left: -8px; animation: glitch-anim-2 0.06s infinite linear alternate;
+            left: -10px; animation: glitch-anim-2 0.05s infinite linear alternate;
         }
 
-        /* BG Grid */
         .bg-grid {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-image: radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px);
@@ -150,7 +165,10 @@
 </head>
 <body>
 
-    <div id="loader"><div class="loader-line"></div></div>
+    <div id="loader">
+        <div class="loader-beam"></div>
+    </div>
+
     <div id="scanline"></div>
     <div class="bg-grid"></div>
 
@@ -175,7 +193,7 @@
             if (char.toUpperCase() === 'K') span.classList.add('big-k');
             
             const randomDelay = (Math.random() * -1).toFixed(2) + 's';
-            const randomSpeed = (0.05 + Math.random() * 0.05).toFixed(2) + 's';
+            const randomSpeed = (0.04 + Math.random() * 0.04).toFixed(2) + 's';
             span.style.setProperty('--g-delay', randomDelay);
             span.style.setProperty('--g-speed', randomSpeed);
             
@@ -186,15 +204,14 @@
         });
 
         const glitchableObjects = [...chars, buttonWrapper];
-
         let scanPos = -100;
-        const speed = 5; // Faster Scanline
+        const speed = 6; 
 
         function animateScan() {
             scanPos += speed;
             if (scanPos > window.innerHeight + 100) scanPos = -100;
             const scanline = document.getElementById('scanline');
-            scanline.style.top = scanPos + 'px';
+            if(scanline) scanline.style.top = scanPos + 'px';
 
             glitchableObjects.forEach(obj => {
                 const rect = obj.getBoundingClientRect();
@@ -208,8 +225,11 @@
         }
         animateScan();
 
-        window.addEventListener('load', () => {
-            setTimeout(() => document.body.classList.add('loaded'), 3200);
+        // Reveal page immediately but with a slow shutter animation
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                document.body.classList.add('loaded');
+            }, 800); // Beam finishes, then shutter starts
         });
     </script>
 </body>
