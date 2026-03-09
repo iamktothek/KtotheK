@@ -23,13 +23,19 @@
 
         class Particle {
             constructor(tx, ty, isBtn) {
-                this.x = Math.random() * window.innerWidth;
-                this.y = Math.random() * window.innerHeight;
+                // MASSIVELY SCATTERED START
+                // Particles start anywhere from -100% to 200% of screen width/height
+                this.x = (Math.random() - 0.5) * (window.innerWidth * 3) + (window.innerWidth / 2);
+                this.y = (Math.random() - 0.5) * (window.innerHeight * 3) + (window.innerHeight / 2);
+                
                 this.tx = tx;
                 this.ty = ty;
                 this.isBtn = isBtn;
-                // Tiny particles for high-density look
                 this.size = isBtn ? 1.2 : 1.5; 
+                
+                // Lower values = Slower, more fluid motion
+                this.ease = 0.015 + (Math.random() * 0.01); 
+                this.friction = 0.95;
                 this.vx = 0;
                 this.vy = 0;
             }
@@ -43,11 +49,11 @@
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
                     const distSq = dx * dx + dy * dy;
-                    if (distSq < 2500) { // Radius threshold
+                    if (distSq < 2000) { 
                         const dist = Math.sqrt(distSq);
-                        const force = (50 - dist) / 50;
-                        targetX += (dx / dist) * force * 25; // Gentle push
-                        targetY += (dy / dist) * force * 25;
+                        const force = (45 - dist) / 45;
+                        targetX += (dx / dist) * force * 20; 
+                        targetY += (dy / dist) * force * 20;
                     }
                 }
 
@@ -57,9 +63,16 @@
                     targetY += (Math.random() - 0.5) * 5;
                 }
 
-                // 3. Physics return
-                this.x += (targetX - this.x) * 0.07;
-                this.y += (targetY - this.y) * 0.07;
+                // 3. Slower Physics Engine
+                // Velocity based movement for a smoother "drift"
+                this.vx += (targetX - this.x) * this.ease;
+                this.vy += (targetY - this.y) * this.ease;
+                
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+
+                this.x += this.vx;
+                this.y += this.vy;
             }
 
             draw() {
@@ -91,8 +104,7 @@
 
             const data = tCtx.getImageData(0, 0, 2000, 1000).data;
             
-            // DRAMATICALLY INCREASED DENSITY
-            const step = 3; // Lower = higher density. 3 is the "sweet spot" for thousands of dots.
+            const step = 3; 
             const points = [];
 
             for (let y = 0; y < 1000; y += step) {
@@ -125,7 +137,6 @@
         }
 
         function animate() {
-            // Slight trails effect (optional, change to clearRect for clean look)
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, width, height);
             
