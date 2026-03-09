@@ -18,20 +18,17 @@
         let width, height;
         
         let particles = [];
-        const particleCount = 2500; // Efficient count for pure JS
         const mouse = { x: -1000, y: -1000 };
         let isOverButton = false;
 
         class Particle {
             constructor(tx, ty, isBtn) {
-                // Start scattered
                 this.x = Math.random() * window.innerWidth;
                 this.y = Math.random() * window.innerHeight;
-                // Target position
                 this.tx = tx;
                 this.ty = ty;
                 this.isBtn = isBtn;
-                this.size = isBtn ? 2.5 : 3;
+                this.size = isBtn ? 1.8 : 2.2; // Smaller particles for higher density
                 this.vx = 0;
                 this.vy = 0;
             }
@@ -40,28 +37,28 @@
                 let targetX = this.tx;
                 let targetY = this.ty;
 
-                // 1. Mouse Repulsion (Text only)
+                // 1. Reduced Mouse Repulsion (Text only)
                 if (!this.isBtn) {
                     const dx = this.x - mouse.x;
                     const dy = this.y - mouse.y;
                     const distSq = dx * dx + dy * dy;
-                    if (distSq < 6000) { // Repulsion radius
+                    if (distSq < 3000) { // Reduced radius (was 6000)
                         const dist = Math.sqrt(distSq);
-                        const force = (80 - dist) / 80;
-                        targetX += (dx / dist) * force * 100;
-                        targetY += (dy / dist) * force * 100;
+                        const force = (55 - dist) / 55; // Reduced reach
+                        targetX += (dx / dist) * force * 35; // Reduced force (was 100)
+                        targetY += (dy / dist) * force * 35;
                     }
                 }
 
                 // 2. Glitch effect (Button only)
                 if (this.isBtn && isOverButton) {
-                    targetX += (Math.random() - 0.5) * 6;
-                    targetY += (Math.random() - 0.5) * 6;
+                    targetX += (Math.random() - 0.5) * 5;
+                    targetY += (Math.random() - 0.5) * 5;
                 }
 
                 // 3. Spring Physics
-                this.vx = (targetX - this.x) * 0.08;
-                this.vy = (targetY - this.y) * 0.08;
+                this.vx = (targetX - this.x) * 0.1; // Snappier return
+                this.vy = (targetY - this.y) * 0.1;
                 this.x += this.vx;
                 this.y += this.vy;
             }
@@ -82,20 +79,19 @@
             tCtx.fillStyle = 'white';
             tCtx.fillRect(0, 0, 2000, 1000);
             
-            // Draw Text
             tCtx.fillStyle = 'black';
-            tCtx.font = 'bold 180px sans-serif';
+            tCtx.font = '900 200px sans-serif'; // Heavier font for density
             tCtx.textAlign = 'center';
             tCtx.fillText("K TO THE K", 1000, 400);
 
             // Draw Button
-            tCtx.fillRect(800, 580, 400, 140);
+            tCtx.fillRect(780, 580, 440, 160);
             tCtx.fillStyle = 'white';
-            tCtx.font = 'bold 80px sans-serif';
-            tCtx.fillText("N8N", 1000, 680);
+            tCtx.font = 'bold 90px sans-serif';
+            tCtx.fillText("N8N", 1000, 690);
 
             const data = tCtx.getImageData(0, 0, 2000, 1000).data;
-            const step = 10; // Density control
+            const step = 5; // Higher density (half the step size)
             const points = [];
 
             for (let y = 0; y < 1000; y += step) {
@@ -105,14 +101,13 @@
                         points.push({
                             x: x,
                             y: y,
-                            isBtn: y > 500
+                            isBtn: y > 520
                         });
                     }
                 }
             }
 
-            // Map points to particles and scale to fit screen
-            const scale = (width * 0.7) / 2000;
+            const scale = (width * 0.75) / 2000; // Slightly larger fit
             const offsetX = (width - (2000 * scale)) / 2;
             const offsetY = (height - (1000 * scale)) / 2;
 
@@ -130,10 +125,10 @@
 
         function animate() {
             ctx.clearRect(0, 0, width, height);
-            particles.forEach(p => {
-                p.update();
-                p.draw();
-            });
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+            }
             requestAnimationFrame(animate);
         }
 
@@ -141,12 +136,11 @@
             mouse.x = e.clientX;
             mouse.y = e.clientY;
 
-            // Check if mouse is over any button particle area
-            const scale = (width * 0.7) / 2000;
-            const btnLeft = (800 * scale) + (width - (2000 * scale)) / 2;
-            const btnRight = (1200 * scale) + (width - (2000 * scale)) / 2;
+            const scale = (width * 0.75) / 2000;
+            const btnLeft = (780 * scale) + (width - (2000 * scale)) / 2;
+            const btnRight = (1220 * scale) + (width - (2000 * scale)) / 2;
             const btnTop = (580 * scale) + (height - (1000 * scale)) / 2;
-            const btnBottom = (720 * scale) + (height - (1000 * scale)) / 2;
+            const btnBottom = (740 * scale) + (height - (1000 * scale)) / 2;
 
             isOverButton = (mouse.x > btnLeft && mouse.x < btnRight && mouse.y > btnTop && mouse.y < btnBottom);
             canvas.style.cursor = isOverButton ? 'pointer' : 'default';
@@ -158,7 +152,7 @@
 
         window.addEventListener('resize', () => {
             resize();
-            init(); // Re-center on resize
+            init(); 
         });
 
         init();
