@@ -15,7 +15,7 @@
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        let width, height;
+        let width, height, time = 0;
         
         let particles = [];
         const mouse = { x: -1000, y: -1000 };
@@ -23,64 +23,69 @@
 
         class Particle {
             constructor(tx, ty, isBtn) {
-                // SPAWN LOGIC: Drift in from the edges like a cloud
-                const edge = Math.floor(Math.random() * 4);
-                if (edge === 0) { this.x = Math.random() * window.innerWidth; this.y = -50; }
-                else if (edge === 1) { this.x = window.innerWidth + 50; this.y = Math.random() * window.innerHeight; }
-                else if (edge === 2) { this.x = Math.random() * window.innerWidth; this.y = window.innerHeight + 50; }
-                else { this.x = -50; this.y = Math.random() * window.innerHeight; }
-
+                // Spawn randomly within the view
+                this.x = Math.random() * window.innerWidth;
+                this.y = Math.random() * window.innerHeight;
+                
                 this.tx = tx;
                 this.ty = ty;
                 this.isBtn = isBtn;
                 
-                // DUST SIZE VARIANCE: Much wider range for organic texture
-                // 0.2px is almost invisible, 2.5px is a distinct grain
-                this.size = Math.random() * Math.random() * 2.5 + 0.2; 
+                // Variable size for the "dust" look
+                this.size = Math.random() * (isBtn ? 1.5 : 2.5) + 0.5;
                 
-                // ASYMPTOTIC DRIFT: Constant pull, no bounce
-                this.ease = 0.01 + Math.random() * 0.02; 
-                this.driftAngle = Math.random() * Math.PI * 2;
-                this.driftSpeed = 0.2 + Math.random() * 0.5;
+                // Physics constants
+                this.ease = 0.04 + Math.random() * 0.03; // Faster return
+                this.vx = 0;
+                this.vy = 0;
+                
+                // Individual "whispy" offsets
+                this.noiseOffset = Math.random() * 100;
             }
 
             update() {
-                // Subtle organic wavering
-                this.driftAngle += 0.01;
-                const ox = Math.cos(this.driftAngle) * this.driftSpeed;
-                const oy = Math.sin(this.driftAngle) * this.driftSpeed;
+                // 1. Whispy / Floating Motion (The "Life" effect)
+                const floatingX = Math.sin(time + this.noiseOffset) * 1.5;
+                const floatingY = Math.cos(time * 0.8 + this.noiseOffset) * 1.5;
 
-                let targetX = this.tx + ox;
-                let targetY = this.ty + oy;
+                let targetX = this.tx + floatingX;
+                let targetY = this.ty + floatingY;
 
-                // Subtle Repulsion
-                if (!this.isBtn) {
-                    const dx = this.x - mouse.x;
-                    const dy = this.y - mouse.y;
-                    const dSq = dx * dx + dy * dy;
-                    if (dSq < 2000) { 
-                        const d = Math.sqrt(dSq);
-                        const f = (45 - d) / 45;
-                        targetX += (dx / d) * f * 12; 
-                        targetY += (dy / d) * f * 12;
-                    }
+                // 2. High-Impact Magnetic Propulsion
+                const dx = this.x - mouse.x;
+                const dy = this.y - mouse.y;
+                const distSq = dx * dx + dy * dy;
+                const radius = 3500; // Size of the magnetic field
+
+                if (distSq < radius) {
+                    const dist = Math.sqrt(distSq);
+                    const force = (radius - distSq) / radius;
+                    // Push them away fast
+                    targetX += (dx / dist) * force * 60; 
+                    targetY += (dy / dist) * force * 60;
                 }
 
+                // 3. Button Glitch
                 if (this.isBtn && isOverButton) {
-                    targetX += (Math.random() - 0.5) * 4;
-                    targetY += (Math.random() - 0.5) * 4;
+                    targetX += (Math.random() - 0.5) * 8;
+                    targetY += (Math.random() - 0.5) * 8;
                 }
 
-                // Smooth Glide
+                // 4. Movement Calculation
                 this.x += (targetX - this.x) * this.ease;
                 this.y += (targetY - this.y) * this.ease;
             }
 
             draw() {
-                ctx.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.3 + 0.6) + ')'; // Random opacity for grain
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillStyle = 'black';
+                // Optimization: Use rects for small dust, circles only for larger grains
+                if (this.size < 1.5) {
+                    ctx.fillRect(this.x, this.y, this.size, this.size);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
         }
 
@@ -88,47 +93,45 @@
             resize();
             const tCvs = document.createElement('canvas');
             const tCtx = tCvs.getContext('2d');
-            tCvs.width = 2000; tCvs.height = 1000;
+            tCvs.width = 1600; tCvs.height = 800; // Slightly smaller buffer
 
-            tCtx.fillStyle = 'white'; tCtx.fillRect(0, 0, 2000, 1000);
+            tCtx.fillStyle = 'white'; tCtx.fillRect(0, 0, 1600, 800);
             tCtx.fillStyle = 'black';
-            tCtx.font = '900 230px system-ui, sans-serif'; 
+            tCtx.font = '900 180px system-ui, -apple-system, sans-serif'; 
             tCtx.textAlign = 'center';
             tCtx.textBaseline = 'middle';
-            tCtx.fillText("K to the K", 1000, 380);
+            tCtx.fillText("K to the K", 800, 300);
 
             // Pill Button
-            const bW = 440, bH = 150, bX = 1000 - bW/2, bY = 580;
+            const bW = 380, bH = 120, bX = 800 - bW/2, bY = 500;
             tCtx.beginPath();
-            tCtx.roundRect(bX, bY, bW, bH, 75);
+            tCtx.roundRect(bX, bY, bW, bH, 60);
             tCtx.fill();
 
             tCtx.fillStyle = 'white';
-            tCtx.font = 'bold 85px system-ui, sans-serif'; 
-            tCtx.fillText("N8N", 1000, bY + bH/2 + 5);
+            tCtx.font = 'bold 60px system-ui, sans-serif'; 
+            tCtx.fillText("N8N", 800, bY + bH/2 + 4);
 
-            const img = tCtx.getImageData(0, 0, 2000, 1000).data;
+            const img = tCtx.getImageData(0, 0, 1600, 800).data;
             const points = [];
             
-            // DITHERED SAMPLING: Lower step but with random probability
-            for (let y = 0; y < 1000; y += 2) {
-                for (let x = 0; x < 2000; x += 2) {
-                    if (img[(y * 2000 + x) * 4] < 200) {
-                        // Only create a particle 40% of the time for a "stippled" look
-                        if (Math.random() > 0.6) {
-                            points.push({
-                                x: x + (Math.random() - 0.5) * 4,
-                                y: y + (Math.random() - 0.5) * 4,
-                                isBtn: y > 500
-                            });
-                        }
+            // Moderate Density with Jitter for organic feel
+            const step = 5; 
+            for (let y = 0; y < 800; y += step) {
+                for (let x = 0; x < 1600; x += step) {
+                    if (img[(y * 1600 + x) * 4] < 128) {
+                        points.push({
+                            x: x + (Math.random() - 0.5) * 3,
+                            y: y + (Math.random() - 0.5) * 3,
+                            isBtn: y > 420
+                        });
                     }
                 }
             }
 
-            const scale = (width * 0.75) / 2000; 
-            const ox = (width - (2000 * scale)) / 2;
-            const oy = (height - (1000 * scale)) / 2;
+            const scale = (width * 0.75) / 1600; 
+            const ox = (width - (1600 * scale)) / 2;
+            const oy = (height - (800 * scale)) / 2;
 
             particles = points.map(p => new Particle(p.x * scale + ox, p.y * scale + oy, p.isBtn));
         }
@@ -140,6 +143,7 @@
 
         function animate() {
             ctx.clearRect(0, 0, width, height);
+            time += 0.02;
             for (let i = 0; i < particles.length; i++) {
                 particles[i].update();
                 particles[i].draw();
@@ -149,9 +153,9 @@
 
         window.addEventListener('mousemove', e => {
             mouse.x = e.clientX; mouse.y = e.clientY;
-            const sc = (width * 0.75) / 2000;
-            const bCY = (655 * sc) + (height - (1000 * sc)) / 2;
-            const bW = 440 * sc, bH = 150 * sc;
+            const sc = (width * 0.75) / 1600;
+            const bCY = (560 * sc) + (height - (800 * sc)) / 2;
+            const bW = 380 * sc, bH = 120 * sc;
             isOverButton = (mouse.x > width/2 - bW/2 && mouse.x < width/2 + bW/2 && mouse.y > bCY - bH/2 && mouse.y < bCY + bH/2);
             canvas.style.cursor = isOverButton ? 'pointer' : 'default';
         });
