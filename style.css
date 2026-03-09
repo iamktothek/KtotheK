@@ -1,6 +1,5 @@
 body{
     margin:0;
-    overflow-x:hidden;
     background:#050505;
     font-family:Arial, Helvetica, sans-serif;
     color:white;
@@ -36,16 +35,11 @@ body{
     text-decoration:none;
     color:white;
     backdrop-filter:blur(10px);
-    transition:.3s;
     }
 
     .btn:hover{
-
-    background:rgba(255,255,255,0.1);
-
     box-shadow:
     0 0 15px #00f5ff,
     0 0 40px #7b61ff;
-
     }
 }
