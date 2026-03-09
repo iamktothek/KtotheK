@@ -13,10 +13,10 @@
             --text-color: #000000;
             --glitch-cyan: #00f2ff;
             --glitch-magenta: #ff00c1;
-            --scanline-color: rgba(0, 0, 0, 0.2);
+            --scanline-color: rgba(0, 0, 0, 0.4);
         }
 
-        /* --- THE MECHANICAL SHUTTER --- */
+        /* --- FIXED SHUTTER & BEAM --- */
         #loader-wrapper {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -24,56 +24,55 @@
             display: flex;
             flex-direction: column;
             pointer-events: none;
+            overflow: hidden;
         }
 
         .shutter {
             flex: 1;
             background: #000;
             width: 100%;
-            transition: transform 1.2s cubic-bezier(0.85, 0, 0.15, 1);
+            position: relative;
+            transition: transform 0.8s cubic-bezier(0.85, 0, 0.15, 1);
         }
 
-        /* Top shutter slides UP, Bottom slides DOWN */
-        .loaded #shutter-top { transform: translateY(-100%); }
-        .loaded #shutter-bottom { transform: translateY(100%); }
-
-        /* The CRT Power Line */
-        .loader-beam {
+        /* The beam is now split between the two shutters so it disappears as they move */
+        .shutter::after {
+            content: "";
             position: absolute;
-            top: 50%; left: 0;
-            width: 0%; height: 2px;
+            left: 0; width: 0%; height: 2px;
             background: #fff;
             box-shadow: 0 0 15px #fff;
-            z-index: 10000;
-            transform: translateY(-50%);
             animation: beamExpand 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        #shutter-top::after { bottom: 0; }
+        #shutter-bottom::after { top: 0; }
 
         @keyframes beamExpand {
             0% { width: 0%; opacity: 0; }
             100% { width: 100%; opacity: 1; }
         }
 
-        /* Hide beam when shutters open */
-        .loaded .loader-beam { opacity: 0; transition: opacity 0.3s; }
+        .loaded #shutter-top { transform: translateY(-100%); }
+        .loaded #shutter-bottom { transform: translateY(100%); }
 
-        /* --- VHS EFFECTS --- */
-        .vhs-overlay {
+        /* --- AGGRESSIVE VHS GRAIN --- */
+        .vhs-grain {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
-            background-size: 100% 4px, 4px 100%;
-            z-index: 40;
+            z-index: 50;
             pointer-events: none;
-            opacity: 0.25;
-            animation: vhs-flicker 0.1s infinite;
+            opacity: 0.12; /* High enough to see clearly */
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
-        @keyframes vhs-flicker {
-            0% { opacity: 0.2; }
-            50% { opacity: 0.28; }
-            100% { opacity: 0.24; }
+        .vhs-lines {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 3px;
+            z-index: 45;
+            pointer-events: none;
+            opacity: 0.1;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; cursor: default; }
@@ -87,13 +86,13 @@
             overflow: hidden; position: relative;
         }
 
-        /* --- THE HEAVY SCANLINE --- */
+        /* --- FAST THIN SCANLINE --- */
         #scanline {
             position: absolute;
-            top: -30px; left: 0; width: 100%; height: 40px;
+            top: -10px; left: 0; width: 100%; height: 4px; /* 10% of previous size */
             background: var(--scanline-color);
             z-index: 20; pointer-events: none;
-            box-shadow: 0 0 25px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
 
         .container { text-align: center; z-index: 5; }
@@ -107,7 +106,7 @@
         .char { position: relative; display: inline-block; font-size: clamp(3rem, 10vw, 8rem); }
         .char.big-k { font-size: clamp(6rem, 20vw, 16rem); line-height: 0.8; }
 
-        /* --- GLITCH --- */
+        /* --- REVERTED SLOWER GLITCH --- */
         .char::before, .char::after {
             content: attr(data-char);
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -138,14 +137,11 @@
             margin-top: 5rem; 
             position: relative; 
             display: inline-block;
-            transition: transform 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            will-change: transform;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-
-        /* Aggressive squash and drop */
         .button-wrapper.active {
-            transform: translateY(40px) scaleY(0.85) scaleX(1.05);
-            transition: transform 0.1s ease-out; 
+            transform: translateY(40px) scaleY(0.8) scaleX(1.1);
+            transition: transform 0.08s ease-out; 
         }
 
         .n8n-link {
@@ -154,13 +150,9 @@
             font-size: 0.85rem; letter-spacing: 0.4em;
             padding: 22px 65px; border: 3px solid var(--text-color);
             background: var(--bg-color); cursor: pointer;
-            transition: background 0.3s, color 0.3s;
+            transition: 0.3s;
         }
-
-        .button-wrapper:hover .n8n-link {
-            background: var(--text-color);
-            color: var(--bg-color);
-        }
+        .button-wrapper:hover .n8n-link { background: var(--text-color); color: var(--bg-color); }
 
         .bg-grid {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -172,12 +164,12 @@
 <body>
 
     <div id="loader-wrapper">
-        <div class="loader-beam"></div>
         <div class="shutter" id="shutter-top"></div>
         <div class="shutter" id="shutter-bottom"></div>
     </div>
 
-    <div class="vhs-overlay"></div>
+    <div class="vhs-grain"></div>
+    <div class="vhs-lines"></div>
     <div id="scanline"></div>
     <div class="bg-grid"></div>
 
@@ -211,7 +203,7 @@
 
         const interactableObjects = [...chars, buttonWrapper];
         let scanPos = -200;
-        const speed = 2.5; 
+        const speed = 7; // Faster Scanline
 
         function animateScan() {
             scanPos += speed;
@@ -232,11 +224,10 @@
 
         animateScan();
 
-        // Mechanical Reveal Logic
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 loaderWrapper.classList.add('loaded');
-            }, 1200); // Give the beam time to span the width
+            }, 1000); 
         });
     </script>
 </body>
