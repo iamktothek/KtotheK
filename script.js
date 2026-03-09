@@ -27,14 +27,14 @@ for (let i = 0; i < 10000; i++) {
                 // Load font
                 const loader = new THREE.FontLoader();
                 loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function(font) {
-                    // Particle text for "K to the K"
-                        createParticleText('K to the K', font, 8, 0, 10, 0xffffff);
+                    // Create particle text for "K to the K"
+                        createParticleText('K to the K', font, 8, 10, 0xffffff);
 
-                            // Particle text for "n8n" (button)
-                                createParticleText('n8n', font, 3, -10, 10, 0xffffff);
+                            // Create particle text for "n8n" (button)
+                                createParticleText('n8n', font, 3, -10, 0xffffff);
                                 });
 
-                                function createParticleText(text, font, size, yPos, particleSize, color) {
+                                function createParticleText(text, font, size, yPos, color) {
                                     const textGeometry = new THREE.TextGeometry(text, {
                                             font: font,
                                                     size: size,
@@ -46,16 +46,16 @@ for (let i = 0; i < 10000; i++) {
                                                                             const particleCount = positions.length / 3;
                                                                                 const particles = new THREE.BufferGeometry();
                                                                                     const particlePositions = new Float32Array(particleCount * 3);
-                                                                                        const particleMaterial = new THREE.PointsMaterial({ color: color, size: 0.15 });
 
-                                                                                            // Initialize particles at random positions
-                                                                                                for (let i = 0; i < particleCount; i++) {
-                                                                                                        const i3 = i * 3;
-                                                                                                                particlePositions[i3] = (Math.random() - 0.5) * 30;
-                                                                                                                        particlePositions[i3 + 1] = (Math.random() - 0.5) * 30 + yPos;
-                                                                                                                                particlePositions[i3 + 2] = (Math.random() - 0.5) * 30;
-                                                                                                                                    }
-                                                                                                                                        particles.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+                                                                                        // Initialize particles at random positions
+                                                                                            for (let i = 0; i < particleCount; i++) {
+                                                                                                    const i3 = i * 3;
+                                                                                                            particlePositions[i3] = (Math.random() - 0.5) * 30;
+                                                                                                                    particlePositions[i3 + 1] = (Math.random() - 0.5) * 10 + yPos;
+                                                                                                                            particlePositions[i3 + 2] = (Math.random() - 0.5) * 10;
+                                                                                                                                }
+                                                                                                                                    particles.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+                                                                                                                                        const particleMaterial = new THREE.PointsMaterial({ color: color, size: 0.2 });
                                                                                                                                             const particleSystem = new THREE.Points(particles, particleMaterial);
                                                                                                                                                 scene.add(particleSystem);
 
