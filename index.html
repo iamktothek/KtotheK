@@ -13,10 +13,10 @@
             --text-color: #000000;
             --glitch-cyan: #00f2ff;
             --glitch-magenta: #ff00c1;
-            --scanline-color: rgba(0, 0, 0, 0.15);
+            --scanline-color: rgba(0, 0, 0, 0.12);
         }
 
-        /* --- CRT / VHS POWER ON LOADER --- */
+        /* --- STABLE FADE-IN LOADER --- */
         #loader {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -24,41 +24,42 @@
             z-index: 100;
             display: flex;
             align-items: center; justify-content: center;
+            transition: opacity 1.5s ease-in-out;
         }
 
-        /* The "Light Beam" of a CRT powering on */
         .loader-beam {
-            width: 100%; height: 2px;
+            width: 0%; height: 1px;
             background: #fff;
-            box-shadow: 0 0 10px #fff;
-            transform: scaleX(0);
-            animation: beamPowerOn 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+            box-shadow: 0 0 8px #fff;
+            animation: beamExpand 1s forwards;
         }
 
-        @keyframes beamPowerOn {
-            0% { transform: scaleX(0); height: 2px; }
-            100% { transform: scaleX(1); height: 2px; }
+        @keyframes beamExpand {
+            0% { width: 0%; }
+            100% { width: 100%; }
         }
 
-        /* When loaded, the beam expands vertically to reveal the page */
-        .loaded #loader {
-            animation: shutterOpen 1.5s cubic-bezier(0.85, 0, 0.15, 1) forwards;
+        body.loaded #loader {
+            opacity: 0;
+            pointer-events: none;
         }
 
-        @keyframes shutterOpen {
-            0% { height: 2px; top: 50%; }
-            100% { height: 100%; top: 0%; opacity: 0; visibility: hidden; }
-        }
-
-        /* --- GLOBAL VHS DISTORTION --- */
-        body::after {
-            content: " ";
+        /* --- VISIBLE VHS DISTORTION --- */
+        .vhs-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_Noise_Generated.png');
-            opacity: 0.04; /* Very subtle grain */
-            z-index: 50;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 3px 100%;
+            z-index: 40;
             pointer-events: none;
+            opacity: 0.15;
+            animation: vhs-flicker 0.15s infinite;
+        }
+
+        @keyframes vhs-flicker {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(1px); }
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; cursor: default; }
@@ -70,14 +71,18 @@
             height: 100vh;
             display: flex; align-items: center; justify-content: center;
             overflow: hidden; position: relative;
+            opacity: 0;
+            transition: opacity 2s ease-in;
         }
+
+        body.loaded { opacity: 1; }
 
         #scanline {
             position: absolute;
-            top: -10px; left: 0; width: 100%; height: 15px;
+            top: -10px; left: 0; width: 100%; height: 20px;
             background: var(--scanline-color);
             z-index: 20; pointer-events: none;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            box-shadow: 0 0 15px rgba(0,0,0,0.05);
         }
 
         .container { text-align: center; z-index: 5; }
@@ -92,7 +97,7 @@
         .char { position: relative; display: inline-block; font-size: clamp(3rem, 10vw, 8rem); }
         .char.big-k { font-size: clamp(6rem, 20vw, 16rem); line-height: 0.8; }
 
-        /* --- HIGH SPEED GLITCH --- */
+        /* --- SLOWER GLITCH (Reverted) --- */
         .char::before, .char::after {
             content: attr(data-char);
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -100,60 +105,55 @@
         }
 
         .char.active::before, .char:hover::before {
-            visibility: visible; left: 8px;
+            visibility: visible; left: 5px;
             color: var(--glitch-cyan); z-index: -1;
-            animation: glitch-anim 0.06s infinite linear alternate-reverse;
+            animation: glitch-anim 0.25s infinite linear alternate-reverse;
             animation-delay: var(--g-delay);
         }
 
         .char.active::after, .char:hover::after {
-            visibility: visible; left: -8px;
+            visibility: visible; left: -5px;
             color: var(--glitch-magenta); z-index: -2;
-            animation: glitch-anim-2 0.04s infinite linear alternate;
+            animation: glitch-anim-2 0.3s infinite linear alternate;
             animation-delay: calc(var(--g-delay) * 0.5);
         }
 
         @keyframes glitch-anim {
-            0% { clip-path: inset(5% 0 70% 0); transform: translate(-5px, 2px); }
-            100% { clip-path: inset(40% 0 10% 0); transform: translate(5px, -2px); }
+            0% { clip-path: inset(10% 0 60% 0); transform: translate(-2px, 1px); }
+            100% { clip-path: inset(30% 0 20% 0); transform: translate(2px, -1px); }
         }
 
         @keyframes glitch-anim-2 {
-            0% { clip-path: inset(50% 0 20% 0); transform: translate(5px, 1px); }
-            100% { clip-path: inset(10% 0 60% 0); transform: translate(-5px, -1px); }
+            0% { clip-path: inset(30% 0 30% 0); transform: translate(2px, 1px); }
+            100% { clip-path: inset(10% 0 70% 0); transform: translate(-2px, -1px); }
         }
 
-        /* --- BUTTON WRAPPER --- */
+        /* --- PHYSICAL BUTTON INTERACTION --- */
         .button-wrapper { 
-            margin-top: 5rem; position: relative; display: inline-block;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-top: 5rem; 
+            position: relative; 
+            display: inline-block;
+            /* Springy snap-back effect */
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
+
+        /* Scanline "Weight" Effect */
+        .button-wrapper.active {
+            transform: translateY(10px) scale(0.98);
+        }
+
         .n8n-link {
             display: inline-block; text-decoration: none;
             color: var(--text-color); font-weight: 900;
             font-size: 0.85rem; letter-spacing: 0.4em;
             padding: 18px 55px; border: 2px solid var(--text-color);
             background: var(--bg-color); cursor: pointer;
-            position: relative; z-index: 10;
-        }
-        .button-wrapper:hover { transform: scale(1.1); letter-spacing: 0.5em; }
-        .button-wrapper:hover .n8n-link { background: var(--text-color); color: var(--bg-color); }
-        
-        .btn-glitch-cyan, .btn-glitch-magenta {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; align-items: center; justify-content: center;
-            border: 2px solid; padding: inherit; font-size: inherit;
-            font-weight: inherit; letter-spacing: inherit;
-            visibility: hidden; pointer-events: none; z-index: -1;
+            transition: all 0.3s ease;
         }
 
-        .button-wrapper.active .btn-glitch-cyan {
-            visibility: visible; color: var(--glitch-cyan); border-color: var(--glitch-cyan);
-            left: 10px; animation: glitch-anim 0.05s infinite linear alternate-reverse;
-        }
-        .button-wrapper.active .btn-glitch-magenta {
-            visibility: visible; color: var(--glitch-magenta); border-color: var(--glitch-magenta);
-            left: -10px; animation: glitch-anim-2 0.05s infinite linear alternate;
+        .button-wrapper:hover .n8n-link {
+            background: var(--text-color);
+            color: var(--bg-color);
         }
 
         .bg-grid {
@@ -165,10 +165,8 @@
 </head>
 <body>
 
-    <div id="loader">
-        <div class="loader-beam"></div>
-    </div>
-
+    <div id="loader"><div class="loader-beam"></div></div>
+    <div class="vhs-overlay"></div>
     <div id="scanline"></div>
     <div class="bg-grid"></div>
 
@@ -176,8 +174,6 @@
         <div class="glitch-text" id="glitch-container"></div>
         <div class="button-wrapper" id="n8n-wrapper">
             <a href="https://n8n.ktothek.com" class="n8n-link">N8N</a>
-            <div class="btn-glitch-cyan">N8N</div>
-            <div class="btn-glitch-magenta">N8N</div>
         </div>
     </div>
 
@@ -191,21 +187,19 @@
             const span = document.createElement('span');
             span.className = 'char';
             if (char.toUpperCase() === 'K') span.classList.add('big-k');
-            
             const randomDelay = (Math.random() * -1).toFixed(2) + 's';
-            const randomSpeed = (0.04 + Math.random() * 0.04).toFixed(2) + 's';
+            const randomSpeed = (0.2 + Math.random() * 0.1).toFixed(2) + 's';
             span.style.setProperty('--g-delay', randomDelay);
             span.style.setProperty('--g-speed', randomSpeed);
-            
             span.innerText = char === ' ' ? '\u00A0' : char;
             span.setAttribute('data-char', char);
             container.appendChild(span);
             chars.push(span);
         });
 
-        const glitchableObjects = [...chars, buttonWrapper];
+        const interactableObjects = [...chars, buttonWrapper];
         let scanPos = -100;
-        const speed = 6; 
+        const speed = 4; 
 
         function animateScan() {
             scanPos += speed;
@@ -213,7 +207,7 @@
             const scanline = document.getElementById('scanline');
             if(scanline) scanline.style.top = scanPos + 'px';
 
-            glitchableObjects.forEach(obj => {
+            interactableObjects.forEach(obj => {
                 const rect = obj.getBoundingClientRect();
                 if (scanPos > rect.top && scanPos < rect.bottom) {
                     obj.classList.add('active');
@@ -225,11 +219,11 @@
         }
         animateScan();
 
-        // Reveal page immediately but with a slow shutter animation
+        // Immediate logic for the loader reveal
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 document.body.classList.add('loaded');
-            }, 800); // Beam finishes, then shutter starts
+            }, 1000); // Wait for beam to exist before fading in
         });
     </script>
 </body>
