@@ -13,175 +13,117 @@
             --text-color: #000000;
             --glitch-cyan: #00f2ff;
             --glitch-magenta: #ff00c1;
+            --vcr-green: #2aff2a;
         }
 
-        /* --- THE MECHANICAL SHUTTER REVEAL --- */
+        /* --- THE MECHANICAL SHUTTER --- */
         #loader-wrapper {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            pointer-events: none;
-            overflow: hidden;
+            z-index: 9999; display: flex; flex-direction: column;
+            pointer-events: none; overflow: hidden;
         }
-
         .shutter {
-            flex: 1;
-            background: #000;
-            width: 100%;
-            position: relative;
+            flex: 1; background: #000; width: 100%; position: relative;
             transition: transform 0.8s cubic-bezier(0.8, 0, 0.2, 1);
         }
-
-        /* The white ignition beam - attached to the shutter edges */
         .shutter::after {
-            content: "";
-            position: absolute;
-            left: 0; width: 100%; height: 2px;
-            background: #fff;
-            box-shadow: 0 0 15px #fff;
-            opacity: 0;
+            content: ""; position: absolute; left: 0; width: 100%; height: 2px;
+            background: #fff; box-shadow: 0 0 15px #fff; opacity: 0;
         }
         #shutter-top::after { bottom: 0; }
         #shutter-bottom::after { top: 0; }
-
-        /* Animation sequence */
-        .power-on .shutter::after { opacity: 1; width: 100%; transition: width 0.6s ease-in; }
+        .power-on .shutter::after { opacity: 1; transition: opacity 0.1s; }
         .loaded #shutter-top { transform: translateY(-100%); }
         .loaded #shutter-bottom { transform: translateY(100%); }
 
-        /* --- VHS GRAIN (High Intensity Snow) --- */
+        /* --- VHS EFFECTS (Grain & Scratches) --- */
         .vhs-grain {
-            position: fixed;
-            top: -50%; left: -50%; width: 200%; height: 200%;
-            z-index: 50;
-            pointer-events: none;
-            background-image: 
-                repeating-radial-gradient(#000 0 0.0001%, #fff 0 0.0002%);
-            background-size: 100px 100px;
-            opacity: 0.07;
+            position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+            z-index: 50; pointer-events: none;
+            background-image: repeating-radial-gradient(#000 0 0.0001%, #fff 0 0.0002%);
+            background-size: 100px 100px; opacity: 0.06;
             animation: grain-flicker 0.15s steps(2) infinite;
         }
-
-        /* --- NEW: VHS DUST & SCRATCHES (Low-Frequency, Random) --- */
         .vhs-dust {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 48;
-            pointer-events: none;
-            opacity: 0; /* Hidden by default */
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 600 600' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-            background-size: 300px 300px;
-            animation: vhs-dust-flash 7s infinite linear;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 48; pointer-events: none; opacity: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 600 600' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='1'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            animation: vhs-dust-flash 4s infinite linear; /* Faster frequency for more dust */
         }
-
         @keyframes vhs-dust-flash {
-            0%, 20%, 25%, 30%, 50%, 60%, 80%, 90%, 100% { opacity: 0; transform: translate(0, 0); }
-            22% { opacity: 0.15; transform: translate(-5px, 10px); }
-            55% { opacity: 0.2; transform: translate(10px, -5px) scale(1.1); }
-            85% { opacity: 0.18; transform: translate(-20px, 15px) rotate(5deg); }
+            0%, 18%, 22%, 48%, 52%, 88%, 100% { opacity: 0; transform: scale(1); }
+            20%, 50%, 90% { opacity: 0.3; transform: scale(1.2) translate(10px, -10px); }
         }
 
-        @keyframes grain-flicker {
-            0% { transform: translate(0, 0); }
-            25% { transform: translate(-1%, -1%); }
-            50% { transform: translate(1%, 1%); }
-            75% { transform: translate(-0.5%, 0.5%); }
-            100% { transform: translate(0, 0); }
+        /* --- VCR STATUS OVERLAY --- */
+        #vcr-status {
+            position: fixed; top: 40px; left: 50px;
+            color: var(--vcr-green); font-family: monospace;
+            font-size: 1.5rem; text-transform: uppercase;
+            z-index: 60; opacity: 0.8; letter-spacing: 2px;
+            text-shadow: 2px 0 0 rgba(255,0,0,0.5), -2px 0 0 rgba(0,0,255,0.5);
+            animation: vcr-blink 1s steps(2) infinite;
         }
+        @keyframes vcr-blink { 0% { opacity: 0.8; } 50% { opacity: 0.2; } }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; cursor: default; }
-
+        /* --- GLOBAL LAYOUT --- */
         body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Inter', sans-serif;
-            height: 100vh;
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'Inter', sans-serif; height: 100vh;
             display: flex; align-items: center; justify-content: center;
             overflow: hidden; position: relative;
         }
+        .container { text-align: center; z-index: 5; transition: transform 0.1s ease; }
+        .container.pulse { transform: scale(0.985); }
 
-        /* NO SCANLINE */
-
-        .container { 
-            text-align: center; 
-            z-index: 5;
-            transition: transform 0.1s cubic-bezier(0.25, 1, 0.5, 1);
-            will-change: transform;
-        }
-        
-        /* The automatic 'pulse' class added to the container by JS */
-        .container.pulse {
-            transform: scale(0.99); /* Subtle 'gulp' of the whole page */
-        }
-
+        /* --- COLOR BLEED & TYPOGRAPHY --- */
         .glitch-text {
             font-weight: 900; text-transform: uppercase;
-            letter-spacing: -0.02em; display: flex;
-            justify-content: center; align-items: center;
+            display: flex; justify-content: center; align-items: center;
             gap: 0.1em; user-select: none;
+            /* Constant Color Bleed Effect */
+            filter: drop-shadow(4px 0 1px rgba(0, 242, 255, 0.3)) 
+                    drop-shadow(-4px 0 1px rgba(255, 0, 193, 0.3));
         }
         .char { position: relative; display: inline-block; font-size: clamp(3rem, 10vw, 8rem); }
         .char.big-k { font-size: clamp(6rem, 20vw, 16rem); line-height: 0.8; }
 
-        /* --- THE GLITCH (Reverted & Aggressive) --- */
+        /* Glitch States */
         .char::before, .char::after {
-            content: attr(data-char);
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            visibility: hidden; background: transparent;
+            content: attr(data-char); position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%; visibility: hidden;
         }
-
-        /* The active class is now sequenced by JS */
-        .char.active::before, .char:hover::before {
-            visibility: visible; left: 6px; color: var(--glitch-cyan); z-index: -1;
-            animation: glitch-anim 0.2s infinite linear alternate-reverse;
-            animation-delay: var(--g-delay);
+        .char.active::before {
+            visibility: visible; left: 8px; color: var(--glitch-cyan);
+            animation: glitch-anim 0.2s infinite;
         }
-        .char.active::after, .char:hover::after {
-            visibility: visible; left: -6px; color: var(--glitch-magenta); z-index: -2;
-            animation: glitch-anim-2 0.25s infinite linear alternate;
-            animation-delay: calc(var(--g-delay) * 0.5);
+        .char.active::after {
+            visibility: visible; left: -8px; color: var(--glitch-magenta);
+            animation: glitch-anim-2 0.2s infinite;
         }
-
         @keyframes glitch-anim {
-            0% { clip-path: inset(10% 0 60% 0); transform: translate(-3px, 2px); }
-            100% { clip-path: inset(30% 0 20% 0); transform: translate(3px, -2px); }
+            0% { clip-path: inset(10% 0 60% 0); transform: translateX(-5px); }
+            100% { clip-path: inset(40% 0 20% 0); transform: translateX(5px); }
         }
         @keyframes glitch-anim-2 {
-            0% { clip-path: inset(30% 0 30% 0); transform: translate(3px, 2px); }
-            100% { clip-path: inset(10% 0 70% 0); transform: translate(-3px, -2px); }
+            0% { clip-path: inset(30% 0 30% 0); transform: translateX(5px); }
+            100% { clip-path: inset(10% 0 70% 0); transform: translateX(-5px); }
         }
 
-        /* --- THE AGGRESSIVE PUSHDOWN BUTTON --- */
+        /* --- BUTTON --- */
         .button-wrapper { 
-            margin-top: 5rem; 
-            position: relative; 
-            display: inline-block;
-            /* Extra springy snap-back */
+            margin-top: 5rem; position: relative; display: inline-block;
             transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-            will-change: transform;
         }
-
-        /* The physical push downwards (triggered by JS Pulse) */
-        .button-wrapper.pulse {
-            transform: translateY(35px) scaleY(0.8) scaleX(1.1);
-            transition: transform 0.08s ease-out; /* Super fast descent */
-        }
-
+        .button-wrapper.pulse { transform: translateY(40px) scaleY(0.7) scaleX(1.15); }
         .n8n-link {
             display: inline-block; text-decoration: none;
-            color: var(--text-color); font-weight: 900;
-            font-size: 0.85rem; letter-spacing: 0.4em;
-            padding: 22px 65px; border: 3px solid var(--text-color);
-            background: var(--bg-color); cursor: pointer;
-            transition: background 0.3s, color 0.3s;
+            color: var(--text-color); font-weight: 900; font-size: 0.85rem;
+            letter-spacing: 0.4em; padding: 22px 65px; border: 3px solid var(--text-color);
+            background: var(--bg-color); transition: 0.3s;
         }
-
-        .button-wrapper:hover .n8n-link {
-            background: var(--text-color);
-            color: var(--bg-color);
-        }
+        .button-wrapper:hover .n8n-link { background: var(--text-color); color: var(--bg-color); }
 
         .bg-grid {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -192,13 +134,16 @@
 </head>
 <body>
 
+    <div id="vcr-status">PLAY ▶<br>00:00:01</div>
+
     <div id="loader-wrapper">
         <div class="shutter" id="shutter-top"></div>
         <div class="shutter" id="shutter-bottom"></div>
     </div>
 
     <div class="vhs-grain"></div>
-    <div class="vhs-dust"></div> <div class="bg-grid"></div>
+    <div class="vhs-dust"></div>
+    <div class="bg-grid"></div>
 
     <div class="container" id="container">
         <div class="glitch-text" id="glitch-container"></div>
@@ -212,61 +157,42 @@
         const glitchContainer = document.getElementById('glitch-container');
         const container = document.getElementById('container');
         const buttonWrapper = document.getElementById('n8n-wrapper');
-        const loaderWrapper = document.getElementById('loader-wrapper');
         const chars = [];
 
         text.split('').forEach(char => {
             const span = document.createElement('span');
             span.className = 'char';
             if (char.toUpperCase() === 'K') span.classList.add('big-k');
-            const randomDelay = (Math.random() * -1).toFixed(2) + 's';
-            const randomSpeed = (0.2 + Math.random() * 0.1).toFixed(2) + 's';
-            span.style.setProperty('--g-delay', randomDelay);
-            span.style.setProperty('--g-speed', randomSpeed);
             span.innerText = char === ' ' ? '\u00A0' : char;
             span.setAttribute('data-char', char);
             glitchContainer.appendChild(span);
             chars.push(span);
         });
 
-        // --- NEW RHYTHMIC PULSE LOGIC (Replaces Scanline) ---
-        // Sequenced glitch for letters
-        function startGlitchCascade() {
-            chars.forEach((char, index) => {
-                // Cascading glitch effect: letters activate in sequence
-                setTimeout(() => {
-                    char.classList.add('active');
-                    // Fast duration: how long each letter glitches for
-                    setTimeout(() => char.classList.remove('active'), 180); 
-                }, index * 100); // 100ms offset per letter
-            });
-        }
-
-        // Global Page & Button Pulse (Synchronized with Glitch Cascade)
         function triggerPulse() {
             container.classList.add('pulse');
             buttonWrapper.classList.add('pulse');
             
-            // Re-trigger the per-character cascade
-            startGlitchCascade();
-            
-            // Gulp duration before snap back
+            // Sequential glitch cascade
+            chars.forEach((char, i) => {
+                setTimeout(() => {
+                    char.classList.add('active');
+                    setTimeout(() => char.classList.remove('active'), 200);
+                }, i * 80);
+            });
+
             setTimeout(() => {
                 container.classList.remove('pulse');
                 buttonWrapper.classList.remove('pulse');
-            }, 150); 
+            }, 100);
         }
 
-        // Mechanical sequence logic
         window.addEventListener('load', () => {
             document.body.classList.add('power-on');
             setTimeout(() => {
-                loaderWrapper.classList.add('loaded');
-                // Trigger first pulse shortly after reveal
-                setTimeout(triggerPulse, 1000);
-                // Set the permanent rhythmic loop (every 2.5 seconds)
-                setInterval(triggerPulse, 2500);
-            }, 800); 
+                document.getElementById('loader-wrapper').classList.add('loaded');
+                setInterval(triggerPulse, 2800);
+            }, 800);
         });
     </script>
 </body>
