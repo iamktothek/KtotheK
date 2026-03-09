@@ -23,16 +23,15 @@
 
     <script>
         let scene, camera, renderer, points;
-        let mouse = new THREE.Vector3(0, 0, 0);
+        let mouse = new THREE.Vector2(-100, -100); // Start off-screen
         let targetRotation = new THREE.Vector2();
+        let raycaster = new THREE.Raycaster();
+        let worldMouse = new THREE.Vector3();
         
         const particleCount = 5000; 
         const positions = new Float32Array(particleCount * 3);
         const targets = new Float32Array(particleCount * 3);
-        const colors = new Float32Array(particleCount * 3);
-        
-        let isOverButton = false;
-        let buttonIndices = []; 
+        const isButtonFlag = new Uint8Array(particleCount); // 1 if button, 0 if text
 
         init();
         animate();
@@ -49,6 +48,7 @@
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
+            // Initial chaotic positions
             for (let i = 0; i < particleCount; i++) {
                 positions[i * 3] = (Math.random() - 0.5) * 50;
                 positions[i * 3 + 1] = (Math.random() - 0.5) * 50;
@@ -57,11 +57,10 @@
 
             const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
             const material = new THREE.PointsMaterial({
-                size: 0.1, 
-                vertexColors: true,
+                size: 0.12, 
+                color: 0x000000,
                 transparent: true,
                 opacity: 0.9
             });
@@ -71,17 +70,18 @@
 
             generateMaps();
 
+            // Initial Assembly
             gsap.to(positions, {
                 endArray: targets,
-                duration: 4.5,
+                duration: 4,
                 ease: "expo.out",
                 onUpdate: () => { points.geometry.attributes.position.needsUpdate = true; }
             });
 
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('touchmove', onTouchMove);
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('touchmove', (e) => onMove(e.touches[0]));
             window.addEventListener('click', onClick);
-            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('resize', onResize);
         }
 
         function generateMaps() {
@@ -93,79 +93,71 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             const vWidth = 2 * Math.tan((camera.fov * Math.PI) / 360) * camera.position.z * camera.aspect;
-            const scale = (vWidth * 0.65) / canvas.width;
+            const scale = (vWidth * 0.6) / canvas.width;
 
+            // DRAW TITLE
             ctx.fillStyle = 'black';
             ctx.font = '900 180px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText("K TO THE K", canvas.width / 2, 400);
 
+            // DRAW BUTTON
             ctx.fillRect(canvas.width / 2 - 220, 600, 440, 160);
             ctx.fillStyle = 'white';
             ctx.font = '700 90px sans-serif';
             ctx.fillText("N8N", canvas.width / 2, 710);
 
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            const titlePoints = [];
-            const buttonPoints = [];
+            const pts = [];
 
-            for (let y = 0; y < canvas.height; y += 4) {
-                for (let x = 0; x < canvas.width; x += 4) {
+            for (let y = 0; y < canvas.height; y += 5) {
+                for (let x = 0; x < canvas.width; x += 5) {
                     const i = (y * canvas.width + x) * 4;
                     if (imgData[i] < 200) {
-                        const pt = {
+                        pts.push({
                             x: (x - canvas.width / 2) * scale,
                             y: (canvas.height / 2 - y) * scale,
-                            isButton: (y > 500)
-                        };
-                        if (pt.isButton) buttonPoints.push(pt);
-                        else titlePoints.push(pt);
+                            isBtn: (y > 500)
+                        });
                     }
                 }
             }
 
             for (let i = 0; i < particleCount; i++) {
-                let pt = i < titlePoints.length ? titlePoints[i] : buttonPoints[i % buttonPoints.length];
-                if (y > 500) buttonIndices.push(i);
-                
-                targets[i * 3] = pt.x;
-                targets[i * 3 + 1] = pt.y;
+                let p = pts[i % pts.length];
+                targets[i * 3] = p.x;
+                targets[i * 3 + 1] = p.y;
                 targets[i * 3 + 2] = 0;
-                colors[i * 3] = 0; colors[i * 3 + 1] = 0; colors[i * 3 + 2] = 0;
+                isButtonFlag[i] = p.isBtn ? 1 : 0;
             }
-            points.geometry.attributes.color.needsUpdate = true;
         }
 
-        function updateMouse(clientX, clientY) {
-            // Convert screen coordinates to 3D world coordinates
-            const vector = new THREE.Vector3(
-                (clientX / window.innerWidth) * 2 - 1,
-                -(clientY / window.innerHeight) * 2 + 1,
-                0.5
-            );
-            vector.unproject(camera);
-            const dir = vector.sub(camera.position).normalize();
-            const distance = -camera.position.z / dir.z;
-            mouse.copy(camera.position).add(dir.multiplyScalar(distance));
+        function onMove(e) {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
             
-            targetRotation.y = ((clientX / window.innerWidth) * 2 - 1) * 0.2;
-            targetRotation.x = -((clientY / window.innerHeight) * 2 + 1) * 0.2;
+            targetRotation.y = mouse.x * 0.3;
+            targetRotation.x = -mouse.y * 0.3;
+
+            // Update virtual interaction point
+            worldMouse.set(mouse.x, mouse.y, 0).unproject(camera);
+            worldMouse.sub(camera.position).normalize();
+            let dist = -camera.position.z / worldMouse.z;
+            worldMouse.copy(camera.position).add(worldMouse.multiplyScalar(dist));
+
+            // Check button hover
+            const over = (mouse.y < -0.15 && mouse.y > -0.55 && Math.abs(mouse.x) < 0.2);
+            if (over !== isOverButton) {
+                isOverButton = over;
+                document.body.style.cursor = isOverButton ? 'pointer' : 'default';
+            }
         }
 
-        function onMouseMove(e) { 
-            updateMouse(e.clientX, e.clientY); 
-            // Button area check
-            const normX = (e.clientX / window.innerWidth) * 2 - 1;
-            const normY = -(e.clientY / window.innerHeight) * 2 + 1;
-            isOverButton = (normY < -0.1 && normY > -0.55 && Math.abs(normX) < 0.18);
-            document.body.style.cursor = isOverButton ? 'pointer' : 'default';
-        }
-
-        function onTouchMove(e) { updateMouse(e.touches[0].clientX, e.touches[0].clientY); }
+        let isOverButton = false;
 
         function onClick() { if (isOverButton) window.location.href = "https://n8n.ktothek.com"; }
 
-        function onWindowResize() {
+        function onResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -179,36 +171,38 @@
 
             const pos = points.geometry.attributes.position.array;
             
-            for(let i = 0; i < particleCount; i++) {
-                const px = pos[i * 3];
-                const py = pos[i * 3 + 1];
-                const pz = pos[i * 3 + 2];
+            // To calculate repulsion correctly while the logo is tilted, 
+            // we must account for the object's rotation.
+            const matrix = new THREE.Matrix4().makeRotationFromEuler(points.rotation);
+            const invMatrix = new THREE.Matrix4().copy(matrix).invert();
+            let localMouse = worldMouse.clone().applyMatrix4(invMatrix);
 
+            for(let i = 0; i < particleCount; i++) {
                 let tx = targets[i * 3];
                 let ty = targets[i * 3 + 1];
                 let tz = targets[i * 3 + 2];
 
-                // REPULSION LOGIC
-                // Calculate distance from particle to mouse in 3D
-                const dx = px - mouse.x;
-                const dy = py - mouse.y;
-                const distSq = dx * dx + dy * dy;
-                const dist = Math.sqrt(distSq);
-                
-                const forceRange = 3.0; // How far the mouse reaches
-                if (dist < forceRange) {
-                    const force = (forceRange - dist) / forceRange;
-                    tx += (dx / dist) * force * 2.0; // Push X
-                    ty += (dy / dist) * force * 2.0; // Push Y
+                // 1. Repulsion (Text Only)
+                if (isButtonFlag[i] === 0) {
+                    const dx = tx - localMouse.x;
+                    const dy = ty - localMouse.y;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq < 4.0) { // Distance threshold
+                        const dist = Math.sqrt(distSq);
+                        const force = (2.0 - dist) / 2.0;
+                        tx += (dx / dist) * force * 1.5;
+                        ty += (dy / dist) * force * 1.5;
+                        tz += force * 2.0;
+                    }
                 }
 
-                // GLITCH LOGIC (Only for button particles)
-                if (isOverButton && i > (particleCount * 0.6)) { 
+                // 2. Glitch (Button Only)
+                if (isOverButton && isButtonFlag[i] === 1) {
                     tx += (Math.random() - 0.5) * 0.3;
                     ty += (Math.random() - 0.5) * 0.3;
                 }
 
-                // Smooth Return (Elasticity)
+                // 3. Smooth Interpolation
                 pos[i * 3] += (tx - pos[i * 3]) * 0.1;
                 pos[i * 3 + 1] += (ty - pos[i * 3 + 1]) * 0.1;
                 pos[i * 3 + 2] += (tz - pos[i * 3 + 2]) * 0.1;
