@@ -117,32 +117,25 @@
             100% { clip-path: inset(30% 0 30% 0); transform: translate(2px, -1px); }
         }
 
-        /* --- BUTTON & HOVER --- */
+        /* --- BUTTON & SLOW SCALE HOVER --- */
         .button-wrapper { margin-top: 4rem; }
         .n8n-link {
             display: inline-block; text-decoration: none;
             color: var(--text-color); font-weight: 900; font-size: 0.85rem;
             letter-spacing: 0.4em; padding: 22px 65px; border: 3px solid var(--text-color);
             background: var(--bg-color); position: relative;
-            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-            overflow: hidden;
+            /* Transition set to 0.8s for a slow, steady increase */
+            transition: transform 0.8s ease-in-out, background 0.4s ease, color 0.4s ease, letter-spacing 0.8s ease-in-out, box-shadow 0.8s ease;
+            transform-origin: center;
         }
         
-        /* Button Hover Effects */
         .n8n-link:hover { 
             background: var(--text-color); 
             color: var(--bg-color);
-            transform: scale(1.05);
-            letter-spacing: 0.5em;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            animation: btn-jitter 0.1s infinite; /* Subtle magnetic jitter */
-        }
-
-        @keyframes btn-jitter {
-            0% { transform: scale(1.05) translate(0,0); }
-            25% { transform: scale(1.05) translate(1px, -1px); }
-            75% { transform: scale(1.05) translate(-1px, 1px); }
-            100% { transform: scale(1.05) translate(0,0); }
+            transform: scale(2.0); /* Twice as large */
+            letter-spacing: 0.6em;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+            z-index: 100;
         }
 
         .bg-grid {
@@ -156,7 +149,7 @@
 
     <div id="vcr-status">
         <span class="vcr-blink">PLAY ▶</span><br>
-        <span id="vcr-timer">00:00:00</span>
+        <span id="vcr-timer">00:00:01</span>
     </div>
 
     <div id="loader-wrapper">
@@ -193,7 +186,7 @@
         });
 
         // 2. VCR Timer Logic
-        let totalSeconds = 0;
+        let totalSeconds = 1; // Start at 1
         function updateTimer() {
             totalSeconds++;
             const hrs = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
